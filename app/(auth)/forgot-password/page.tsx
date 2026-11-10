@@ -24,8 +24,9 @@ export default function ForgotPasswordPage() {
 
     sendResetLink(email, {
       onSuccess: () => {
+        // BE sengaja selalu membalas 200 generik (anti enumerasi akun) — jangan
+        // klaim email pasti terkirim / terdaftar.
         setIsSubmitted(true);
-        toast.success("Tautan atur ulang kata sandi berhasil dikirim!");
       },
       onError: (err: unknown) => {
         const errMsg = getApiErrorMessage(err, "Gagal mengirim tautan pemulihan.");
@@ -74,16 +75,18 @@ export default function ForgotPasswordPage() {
             </form>
           </>
         ) : (
-          <div className="text-center py-4 space-y-4">
+          <div className="text-center py-4 space-y-4" role="status">
             <div className="mx-auto w-12 h-12 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center">
               <CheckCircle2 size={28} />
             </div>
             <div className="space-y-1.5">
               <h2 className="font-display font-extrabold text-xl text-ink tracking-tight">
-                Email Terkirim!
+                Cek email kamu
               </h2>
               <p className="text-xs text-ink-muted leading-relaxed px-2">
-                Kami telah mengirimkan tautan instruksi pemulihan kata sandi ke email <strong className="text-ink">{email}</strong>. Silakan periksa kotak masuk atau folder spam Anda.
+                Jika <strong className="text-ink">{email}</strong> terdaftar di Rongsok.in, tautan
+                untuk mengatur ulang kata sandi sudah kami kirim. Periksa kotak masuk atau folder spam;
+                tautan berlaku terbatas.
               </p>
             </div>
             <div className="pt-2">
