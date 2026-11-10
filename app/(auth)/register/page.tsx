@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -42,7 +42,11 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
-  const [role, setRole] = useState<"CUSTOMER" | "COLLECTOR" | "">("");
+  // Preselect role dari URL (?role=COLLECTOR) — lazy init, bukan effect.
+  const [role, setRole] = useState<"CUSTOMER" | "COLLECTOR" | "">(() => {
+    const r = searchParams.get("role");
+    return r === "COLLECTOR" || r === "CUSTOMER" ? r : "";
+  });
 
   // Step 2 — Biodata
   const [email, setEmail] = useState("");
@@ -70,13 +74,6 @@ function RegisterForm() {
   const { mutate: register, isPending: isRegistering } = useRegister();
   const { mutate: setupProfile, isPending: isSettingProfile } = useUpdateCollectorProfile();
 
-  // Preselect role dari URL (?role=COLLECTOR)
-  useEffect(() => {
-    const r = searchParams.get("role");
-    if (r === "COLLECTOR" || r === "CUSTOMER") setRole(r);
-  }, [searchParams]);
-
-  const totalSteps = role === "COLLECTOR" ? 4 : 3;
   const stepList = role === "COLLECTOR" ? [1, 2, 3, 4] : [1, 2, 3];
 
   // ── Step 2: biodata → lanjut ke KYC ──────────────────────────────────────

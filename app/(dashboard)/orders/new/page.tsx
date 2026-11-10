@@ -97,19 +97,20 @@ function OrderForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Pre-select dari URL (?category=) — id atau nama kategori
-  useEffect(() => {
-    if (!initCat || mains.length === 0 || items.length > 0) return;
+  // Pre-select dari URL (?category=) — id atau nama kategori. Dijalankan sekali
+  // saat kategori selesai dimuat (penyesuaian state saat render, bukan effect).
+  const [initCatApplied, setInitCatApplied] = useState(false);
+  if (!initCatApplied && initCat && mains.length > 0) {
+    setInitCatApplied(true);
     const cat =
       mains.find((m) => m.id === initCat) ||
       mains.find((m) => m.name.toLowerCase() === initCat.toLowerCase()) ||
       byId[initCat];
-    if (cat) {
+    if (cat && items.length === 0) {
       setItems([{ categoryId: cat.id, weight: "", notes: "" }]);
       setStep(2);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initCat, mains, byId]);
+  }
 
   // ── Toggle kategori (multi-select) ───────────────────────────────────────
   const toggleCategory = (catId: string) => {
@@ -212,7 +213,7 @@ function OrderForm() {
               ? `Setoran terkirim ke ${forwardShopName || "pengepul pilihanmu"}! Menunggu persetujuan…`
               : "Setoran berhasil dibuat! Mencari pengepul…"
           );
-          const orderId = (res as any)?.data?.id || (res as any)?.id;
+          const orderId = res?.data?.id;
           router.push(orderId ? `/orders/${orderId}` : "/orders");
         },
         onError: (err: unknown) => {

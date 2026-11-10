@@ -48,7 +48,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import type { Order } from "@/types";
 
-const mainIcon = (name: string): any => {
+const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
   if (name.includes("Plastik")) return RefreshCw;
   if (name.includes("Kertas") || name.includes("Kardus")) return Box;
   if (name.includes("Logam") || name.includes("Besi")) return Wrench;
@@ -375,6 +375,7 @@ export default function CustomerDashboard() {
                 >
                   <div className="w-11 h-11 bg-surface rounded-2xl flex items-center justify-center shrink-0 text-ink overflow-hidden">
                     {collector.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- avatar Cloudinary eksternal
                       <img src={collector.avatarUrl} alt={collector.shopName} className="w-full h-full object-cover" />
                     ) : (
                       <Archive size={20} />

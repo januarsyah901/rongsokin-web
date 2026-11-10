@@ -17,7 +17,6 @@ import {
   Trash2,
   TrendingUp,
   Users,
-  X,
   AlertTriangle,
   Search,
   Filter,

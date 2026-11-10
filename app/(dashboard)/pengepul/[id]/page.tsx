@@ -13,9 +13,6 @@ import {
   Archive,
   Wrench,
   RefreshCw,
-  FileText,
-  Monitor,
-  Sparkles,
   AlertCircle,
   Box,
   Wine,
@@ -34,7 +31,7 @@ import { useUserCoords } from "@/hooks/useUserCoords";
 import { formatRupiah, formatDate, formatDistance, haversineMeters } from "@/lib/utils";
 import toast from "react-hot-toast";
 
-const getCategoryIcon = (name: string): any => {
+const getCategoryIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
   const n = name.toLowerCase();
   if (n.includes("plastik")) return RefreshCw;
   if (n.includes("kertas") || n.includes("kardus")) return Box;

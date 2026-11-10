@@ -44,25 +44,17 @@ function SearchInner() {
   // GPS-langsung yang mengabaikan lokasi tersimpan, jadi jarak yang ditampilkan
   // beda dengan halaman lain untuk lapak yang sama.
   const { coords } = useUserCoords();
-  const [selectedMainId, setSelectedMainId] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState("");
-
   const { mains } = useCategoryTree();
 
-  // Default ke "Semua" atau dari ?category= (nama induk dari landing)
-  useEffect(() => {
-    if (mains.length === 0) return;
-    const param = searchParams.get("category");
-    const byName = param
-      ? mains.find((m) => m.name.toLowerCase() === param.toLowerCase())
-      : null;
-    setSelectedMainId((prev) => prev || byName?.id || "");
-
-    const q = searchParams.get("q");
-    if (q) {
-      setSearchQuery(q);
-    }
-  }, [mains, searchParams]);
+  // Kategori dipilih user (null = belum memilih → ikuti ?category= dari landing).
+  // Diturunkan saat render, bukan disalin ke state lewat effect.
+  const [pickedMainId, setSelectedMainId] = useState<string | null>(null);
+  const categoryParam = searchParams.get("category");
+  const paramMainId = categoryParam
+    ? mains.find((m) => m.name.toLowerCase() === categoryParam.toLowerCase())?.id ?? ""
+    : "";
+  const selectedMainId = pickedMainId ?? paramMainId;
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") ?? "");
 
   const selectedMain = mains.find((m) => m.id === selectedMainId);
   const { data: collectors, isLoading } = useSearchCollectors({
@@ -190,6 +182,7 @@ function SearchInner() {
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 bg-surface rounded-2xl flex items-center justify-center shrink-0 overflow-hidden transition-colors">
                       {collector.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- avatar Cloudinary eksternal
                         <img src={collector.avatarUrl} alt={collector.shopName} className="w-full h-full object-cover" />
                       ) : (
                         <Archive size={24} />
@@ -261,6 +254,7 @@ function SearchInner() {
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 bg-surface rounded-2xl flex items-center justify-center shrink-0 overflow-hidden transition-colors">
                       {collector.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- avatar Cloudinary eksternal
                         <img src={collector.avatarUrl} alt={collector.shopName} className="w-full h-full object-cover" />
                       ) : (
                         <Archive size={24} />
