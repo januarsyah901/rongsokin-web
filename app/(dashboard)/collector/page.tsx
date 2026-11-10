@@ -369,7 +369,7 @@ function RequestRow({
           </div>
         )}
       </td>
-      <td className="p-3">
+      <td className="p-3 hidden md:table-cell">
         <div className="flex flex-wrap gap-1 max-w-[160px]">
           {items.length > 0 ? (
             items.map((it) => (
@@ -388,8 +388,8 @@ function RequestRow({
       <td className="p-3 font-extrabold font-mono text-ink">
         {getOrderTotalEstWeight(order).toFixed(1)} kg
       </td>
-      <td className="p-3 text-ink-muted font-mono font-medium">{distance}</td>
-      <td className="p-3">
+      <td className="p-3 text-ink-muted font-mono font-medium hidden sm:table-cell">{distance}</td>
+      <td className="p-3 hidden md:table-cell">
         <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-surface text-ink-muted">
           {order.method}
         </span>
@@ -687,10 +687,10 @@ export default function CollectorDashboard() {
                 <thead>
                   <tr className="bg-surface border-b border-ink-faint text-mute font-bold text-[10px] uppercase tracking-wider font-mono">
                     <th className="p-3">Nama &amp; Area</th>
-                    <th className="p-3">Kategori</th>
+                    <th className="p-3 hidden md:table-cell">Kategori</th>
                     <th className="p-3">Berat Est.</th>
-                    <th className="p-3">Jarak</th>
-                    <th className="p-3">Metode</th>
+                    <th className="p-3 hidden sm:table-cell">Jarak</th>
+                    <th className="p-3 hidden md:table-cell">Metode</th>
                     <th className="p-3 text-right">Aksi</th>
                   </tr>
                 </thead>

@@ -19,10 +19,17 @@ const isPublicPath = (pathname: string) => pathname.startsWith("/pengepul");
  * bukan disimpan di state — supaya tidak ada setState di effect & tidak ada
  * kedipan konten terlarang sebelum redirect.
  */
-function guardRedirect(pathname: string, token: string | null, role?: UserRole): string | null {
+function guardRedirect(
+  pathname: string,
+  token: string | null,
+  role?: UserRole,
+  loggedOut = false
+): string | null {
   if (!token) {
     if (isPublicPath(pathname)) return null;
-    return `/login?next=${encodeURIComponent(pathname)}`;
+    // Logout manual → ke /login polos (akun berikutnya tidak dilempar ke halaman
+    // akun sebelumnya). Belum login / deep link → simpan tujuan di ?next=.
+    return loggedOut ? "/login" : `/login?next=${encodeURIComponent(pathname)}`;
   }
   const startsWith = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
   if (startsWith("/admin") && role !== "ADMIN") return homeFor(role);
@@ -44,12 +51,13 @@ export default function DashboardLayout({
   const hydrated = useAuthStore((state) => state.hydrated);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.user?.role);
+  const loggedOut = useAuthStore((state) => state.loggedOut);
 
   useEffect(() => {
     initFromStorage();
   }, [initFromStorage]);
 
-  const redirect = hydrated ? guardRedirect(pathname, token, role) : null;
+  const redirect = hydrated ? guardRedirect(pathname, token, role, loggedOut) : null;
 
   useEffect(() => {
     if (redirect) router.replace(redirect);

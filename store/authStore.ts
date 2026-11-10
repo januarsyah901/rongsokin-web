@@ -8,6 +8,8 @@ interface AuthStore {
   token: string | null;
   /** true setelah localStorage dibaca (sebelum itu status login belum diketahui). */
   hydrated: boolean;
+  /** true setelah logout manual → guard tidak menambahkan ?next= ke /login. */
+  loggedOut: boolean;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
   initFromStorage: () => void;
@@ -17,12 +19,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   token: null,
   hydrated: false,
+  loggedOut: false,
   setAuth: (user, token) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
     }
-    set({ user, token, hydrated: true });
+    set({ user, token, hydrated: true, loggedOut: false });
   },
   logout: () => {
     if (typeof window !== 'undefined') {
@@ -34,7 +37,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     disconnectSocket();
     useOrderStore.getState().setIncomingOrders([]);
     useOrderStore.getState().setActiveOrders([]);
-    set({ user: null, token: null, hydrated: true });
+    set({ user: null, token: null, hydrated: true, loggedOut: true });
   },
   initFromStorage: () => {
     if (typeof window === 'undefined') return;
