@@ -31,6 +31,7 @@ import { useCategoryTree } from "@/hooks/useDiscovery";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 // Ikon per kategori UTAMA (by name)
 const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
@@ -134,8 +135,9 @@ function OrderForm() {
     try {
       const { url } = await uploadToCloudinary(blob);
       setPhotoUrl(url);
-    } catch {
-      toast.error("Gagal mengunggah foto. Foto ulang ya.");
+    } catch (err) {
+      toast.error(`${getApiErrorMessage(err, "Gagal mengunggah foto.")} Foto ulang ya.`);
+      setPhotoUrl("");
       setPhotoPreview("");
     } finally {
       setIsUploading(false);
@@ -213,8 +215,8 @@ function OrderForm() {
           const orderId = (res as any)?.data?.id || (res as any)?.id;
           router.push(orderId ? `/orders/${orderId}` : "/orders");
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal membuat setoran. Coba kembali.");
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal membuat setoran. Coba kembali."));
         },
       }
     );

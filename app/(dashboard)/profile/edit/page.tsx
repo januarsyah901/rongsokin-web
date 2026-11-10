@@ -25,6 +25,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { DEFAULT_COORDS } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { uploadToCloudinary } from "@/lib/upload";
 
 export default function EditProfilePage() {
@@ -90,43 +91,39 @@ export default function EditProfilePage() {
 
   // ── Upload avatar ────────────────────────────────────────────────────────
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      const { url, remote } = await uploadToCloudinary(file);
+      const { url } = await uploadToCloudinary(file);
       setAvatarUrl(url);
-      if (remote) {
-        toast.success("Foto profil diunggah!");
-      } else {
-        toast.success("Foto profil dipilih (Mode demo).");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Gagal unggah foto. Coba lagi.");
+      toast.success("Foto profil diunggah!");
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Gagal unggah foto. Coba lagi."));
     } finally {
       setIsUploading(false);
+      input.value = ""; // izinkan memilih file yang sama lagi
     }
   };
 
   // ── Upload banner ────────────────────────────────────────────────────────
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     setIsUploadingBanner(true);
     try {
-      const { url, remote } = await uploadToCloudinary(file);
+      const { url } = await uploadToCloudinary(file);
       setShopImageUrl(url);
-      if (remote) {
-        toast.success("Foto sampul diunggah!");
-      } else {
-        toast.success("Foto sampul dipilih (Mode demo).");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Gagal unggah foto sampul. Coba lagi.");
+      toast.success("Foto sampul diunggah!");
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Gagal unggah foto sampul. Coba lagi."));
     } finally {
       setIsUploadingBanner(false);
+      input.value = "";
     }
   };
 
@@ -188,8 +185,7 @@ export default function EditProfilePage() {
       toast.success("Profil berhasil diperbarui!");
       router.push("/profile");
     } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || "Gagal menyimpan perubahan.");
+      toast.error(getApiErrorMessage(err, "Gagal menyimpan perubahan."));
     } finally {
       setIsSaving(false);
     }
