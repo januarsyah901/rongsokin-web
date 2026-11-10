@@ -24,8 +24,7 @@ import {
 } from "lucide-react";
 import { useRegister } from "@/hooks/useAuth";
 import { useUpdateCollectorProfile } from "@/hooks/useCollector";
-import { recognizeKtp } from "@/lib/ktpOcr";
-import { uploadToCloudinary } from "@/lib/upload";
+import { scanKtp } from "@/lib/ktpOcr";
 import toast from "react-hot-toast";
 
 type OcrStatus = "idle" | "scanning" | "done" | "failed";
@@ -52,8 +51,9 @@ function RegisterForm() {
   // Step 3 — KYC (KTP)
   const [showCamera, setShowCamera] = useState(true);
   const [ktpPreview, setKtpPreview] = useState("");
-  const [ktpUrl, setKtpUrl] = useState("");
-  const [uploadingKtp, setUploadingKtp] = useState(false);
+  // Token bertanda tangan dari OCR server — bukti NIK benar terbaca dari KTP.
+  // Foto KTP sendiri TIDAK diunggah/disimpan (privasi).
+  const [kycAttestation, setKycAttestation] = useState<string | null>(null);
   const [nik, setNik] = useState("");
   const [ktpName, setKtpName] = useState("");
   const [ocrStatus, setOcrStatus] = useState<OcrStatus>("idle");
@@ -96,18 +96,14 @@ function RegisterForm() {
     setNik("");
     setKtpName("");
 
-    // Upload ke Cloudinary (paralel dengan OCR)
-    setUploadingKtp(true);
-    uploadToCloudinary(blob)
-      .then((r) => setKtpUrl(r.url))
-      .catch(() => toast.error("Gagal mengunggah foto KTP. Ulangi foto."))
-      .finally(() => setUploadingKtp(false));
+    setKycAttestation(null);
 
     // OCR NIK + Nama. NIK = kunci utama → status sukses kalau NIK terbaca.
     try {
-      const res = await recognizeKtp(blob);
+      const res = await scanKtp(blob);
       setNik(res.nik || "");
       setKtpName(res.name || "");
+      setKycAttestation(res.attestation);
       setOcrStatus(res.nik ? "done" : "failed");
       setFieldsLocked(!!res.name); // nama dikunci kalau terbaca, bisa dikoreksi manual
     } catch {
@@ -119,7 +115,7 @@ function RegisterForm() {
   const retakeKtp = () => {
     setShowCamera(true);
     setKtpPreview("");
-    setKtpUrl("");
+    setKycAttestation(null);
     setNik("");
     setKtpName("");
     setOcrStatus("idle");
@@ -131,10 +127,6 @@ function RegisterForm() {
     e.preventDefault();
     if (!ktpPreview) {
       toast.error("Ambil foto KTP terlebih dahulu.");
-      return;
-    }
-    if (uploadingKtp) {
-      toast.error("Tunggu, foto KTP sedang diunggah…");
       return;
     }
     if (!/^\d{16}$/.test(nik)) {
@@ -155,14 +147,19 @@ function RegisterForm() {
         role: role as "CUSTOMER" | "COLLECTOR",
         nik,
         ktpName: ktpName.trim(),
-        // Fallback sentinel bila upload foto KTP gagal/kosong — BE lama syaratkan
-        // ktpUrl agar isVerified=true; ini bikin verifikasi tetap jalan (BE baru
-        // cukup dari NIK, sentinel diabaikan). Bukan foto KTP.
-        ktpUrl: ktpUrl || "verified-by-nik",
+        kycAttestation: kycAttestation || undefined,
       },
       {
-        onSuccess: () => {
-          toast.success("Verifikasi & registrasi berhasil!");
+        onSuccess: (res) => {
+          // BE hanya menandai terverifikasi bila NIK terbukti dari OCR server.
+          if (res?.data?.user?.isVerified) {
+            toast.success("Verifikasi & registrasi berhasil!");
+          } else {
+            toast("Akun dibuat, tapi verifikasi KTP belum berhasil. Ulangi lewat Profil → Verifikasi.", {
+              icon: "⚠️",
+              duration: 6000,
+            });
+          }
           if (role === "COLLECTOR") {
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition(
@@ -506,15 +503,12 @@ function RegisterForm() {
                       className="w-full"
                       disabled={
                         isRegistering ||
-                        uploadingKtp ||
                         ocrStatus === "scanning" ||
                         !/^\d{16}$/.test(nik)
                       }
                     >
                       {isRegistering
                         ? "Memproses…"
-                        : uploadingKtp
-                        ? "Mengunggah foto…"
                         : ocrStatus === "scanning"
                         ? "Membaca KTP…"
                         : !/^\d{16}$/.test(nik)

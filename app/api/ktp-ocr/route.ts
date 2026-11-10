@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { signKycAttestation } from "@/lib/kycAttestation";
 
 // Baca NIK + Nama dari foto KTP pakai Gemini (vision) — DI SERVER.
 // API key TIDAK pernah sampai ke browser: cuma dibaca dari process.env di sini.
@@ -15,7 +16,61 @@ Balas HANYA dengan JSON valid, tanpa teks atau penjelasan lain, bentuk persis:
 {"nik":"<16 digit angka saja, atau string kosong jika tak terbaca>","nama":"<nama lengkap HURUF KAPITAL, atau string kosong>","terbaca":<true jika NIK & nama jelas terbaca; false jika foto buram/terpotong/silau/bukan KTP>,"alasan":"<jika terbaca=false, satu kalimat singkat kenapa>"}
 Aturan: NIK harus tepat 16 digit angka (hapus spasi/titik). Kalau ragu atau gambar tidak jelas, set terbaca=false dan kosongkan nik.`;
 
+// ── Guard: route ini memakai kuota Gemini milik project, jadi jangan jadi
+// proxy gratis untuk publik. ─────────────────────────────────────────────────
+const MAX_BASE64_CHARS = 7 * 1024 * 1024; // ≈5MB gambar
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+// Rate limit per IP, in-memory. Di Vercel tiap instance punya memori sendiri,
+// jadi ini best-effort (menahan spam dari satu klien), bukan batas global.
+const RATE_MAX = 8;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+  }
+  let b = hits.get(ip);
+  if (!b || b.resetAt <= now) {
+    b = { count: 0, resetAt: now + RATE_WINDOW_MS };
+    hits.set(ip, b);
+  }
+  b.count += 1;
+  return b.count > RATE_MAX;
+}
+
+// Hanya terima request dari halaman app sendiri (browser selalu mengirim Origin
+// untuk POST fetch). Bukan pengaman mutlak — curl bisa memalsukan header — tapi
+// menutup pemakaian langsung dari situs lain.
+function sameOrigin(req: NextRequest): boolean {
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  if (!origin || !host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
+  if (!sameOrigin(req)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  const ip =
+    req.headers.get("x-real-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    "unknown";
+  if (rateLimited(ip)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > MAX_BASE64_CHARS + 4096) {
+    return NextResponse.json({ error: "too_large" }, { status: 413 });
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     // Key belum diset di Vercel → 503 supaya FE jatuh ke OCR lokal (tetap jalan).
@@ -33,6 +88,12 @@ export async function POST(req: NextRequest) {
   }
   if (!imageBase64) {
     return NextResponse.json({ error: "no_image" }, { status: 400 });
+  }
+  if (imageBase64.length > MAX_BASE64_CHARS) {
+    return NextResponse.json({ error: "too_large" }, { status: 413 });
+  }
+  if (!ALLOWED_MIME.has(mimeType)) {
+    return NextResponse.json({ error: "bad_mime" }, { status: 400 });
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
@@ -59,11 +120,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (!geminiRes.ok) {
+    // Detail error Gemini cukup di log server — jangan bocorkan ke client.
     const detail = await geminiRes.text().catch(() => "");
-    return NextResponse.json(
-      { error: "gemini_error", status: geminiRes.status, detail: detail.slice(0, 300) },
-      { status: 502 }
-    );
+    console.error("Gemini error", geminiRes.status, detail.slice(0, 300));
+    return NextResponse.json({ error: "gemini_error" }, { status: 502 });
   }
 
   const data = await geminiRes.json().catch(() => null);
@@ -104,5 +164,7 @@ export async function POST(req: NextRequest) {
     nama,
     terbaca,
     alasan: terbaca ? "" : String(parsed.alasan ?? "Foto kurang jelas"),
+    // Bukti bertanda tangan untuk BE — hanya bila NIK benar-benar terbaca.
+    attestation: terbaca ? signKycAttestation(nik, nama) : null,
   });
 }

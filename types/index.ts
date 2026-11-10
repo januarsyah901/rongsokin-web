@@ -37,10 +37,11 @@ export interface RegisterPayload {
   phone?: string;
   password: string;
   role: 'CUSTOMER' | 'COLLECTOR';
-  /** Hasil OCR KTP + foto live (Cloudinary URL). */
+  /** Hasil OCR KTP. Foto KTP tidak diunggah. */
   nik?: string;
   ktpName?: string;
-  ktpUrl?: string;
+  /** Token bertanda tangan dari /api/ktp-ocr — syarat BE menandai terverifikasi. */
+  kycAttestation?: string;
 }
 
 export interface CollectorProfile {

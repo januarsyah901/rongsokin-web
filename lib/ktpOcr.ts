@@ -142,3 +142,45 @@ export async function recognizeKtp(image: Blob | string): Promise<KtpOcrResult> 
     await worker.terminate();
   }
 }
+
+// ── Scan KTP: OCR server (Gemini, bertanda tangan) → fallback Tesseract ──────
+export interface KtpScanResult {
+  nik: string | null;
+  name: string | null;
+  /** Token bertanda tangan dari server. null = hasil OCR lokal, BE tak akan menandai terverifikasi. */
+  attestation: string | null;
+  /** true bila server membaca foto tapi menyatakan tidak jelas (minta foto ulang). */
+  unreadable?: boolean;
+  reason?: string;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] || "");
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+export async function scanKtp(image: Blob): Promise<KtpScanResult> {
+  try {
+    const res = await fetch("/api/ktp-ocr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64: await blobToBase64(image), mimeType: image.type || "image/jpeg" }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.terbaca && data.nik) {
+        return { nik: data.nik, name: data.nama || null, attestation: data.attestation || null };
+      }
+      return { nik: null, name: null, attestation: null, unreadable: true, reason: data?.alasan };
+    }
+    // 503 (Gemini belum dikonfigurasi), 429, 5xx → jatuh ke OCR lokal
+  } catch {
+    // jaringan gagal → OCR lokal
+  }
+  const local = await recognizeKtp(image);
+  return { nik: local.nik, name: local.name, attestation: null };
+}
