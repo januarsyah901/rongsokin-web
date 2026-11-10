@@ -1,0 +1,70 @@
+# Stack Rongsok.in di server ini: /opt/stacks/apps/rongsokin
+# Disalin & dijalankan oleh deploy/deploy.sh. Rahasia ada di .env (hanya di server, izin 600).
+# Nama service `app` & image API sengaja dipertahankan: workflow CI repo API
+# (`docker compose pull app && up -d app`) tetap jalan.
+services:
+  db:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: rongsokin-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rongsok_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: rongsok_db
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rongsok_user -d rongsok_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [gateway-net]
+
+  app:
+    image: ghcr.io/mrfroglab/be-rongsok.in:latest
+    container_name: rongsokin-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgresql://rongsok_user:${DB_PASSWORD}@rongsokin-db:5432/rongsok_db?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib}
+      KYC_ATTESTATION_SECRET: ${KYC_ATTESTATION_SECRET}
+      CORS_ORIGINS: ${SITE_URL}
+      FRONTEND_URL: ${SITE_URL}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 6
+    networks: [gateway-net]
+
+  web:
+    image: rongsokin-web:latest
+    container_name: rongsokin-web
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      KYC_ATTESTATION_SECRET: ${KYC_ATTESTATION_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    networks: [gateway-net]
+
+networks:
+  gateway-net:
+    external: true
