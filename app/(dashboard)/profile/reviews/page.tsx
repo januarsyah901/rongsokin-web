@@ -45,6 +45,7 @@ export default function MyReviewsPage() {
         <Link
           href="/profile"
           className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
+          aria-label="Kembali"
         >
           <ArrowLeft size={22} />
         </Link>

@@ -433,7 +433,7 @@ export default function OrderTrackingPage() {
 
       {/* MOBILE HEADER */}
       <header className="sticky top-0 z-50 bg-surface-raised border-b border-ink-faint px-4 py-4 flex items-center gap-4 md:hidden">
-        <button
+        <button aria-label="Kembali"
           onClick={() => router.back()}
           className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
         >
@@ -1048,10 +1048,10 @@ export default function OrderTrackingPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-mute uppercase tracking-widest block">
+              <label htmlFor="order-ulasan-singkat-opsional" className="text-[10px] font-bold text-mute uppercase tracking-widest block">
                 Ulasan Singkat (Opsional)
               </label>
-              <textarea
+              <textarea id="order-ulasan-singkat-opsional"
                 value={ratingComment}
                 onChange={(e) => setRatingComment(e.target.value)}
                 placeholder="Contoh: Sangat ramah, timbangan tepat…"

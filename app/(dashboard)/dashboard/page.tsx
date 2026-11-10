@@ -181,6 +181,7 @@ export default function CustomerDashboard() {
           <button
             onClick={handleLogout}
             className="w-9 h-9 rounded-2xl bg-surface flex items-center justify-center text-ink-muted hover:text-status-error transition-colors"
+            aria-label="Keluar"
           >
             <LogOut size={18} />
           </button>

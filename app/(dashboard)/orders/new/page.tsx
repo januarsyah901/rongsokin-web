@@ -240,7 +240,7 @@ function OrderForm() {
       <div className="max-w-lg mx-auto bg-surface-raised min-h-screen md:my-6 md:rounded-2xl md:min-h-0">
         {/* MOBILE HEADER */}
         <header className="sticky top-0 z-50 bg-surface-raised border-b border-ink-faint px-4 py-3 flex items-center gap-3 md:hidden md:rounded-t-2xl">
-          <button
+          <button aria-label="Kembali"
             onClick={() => (step > 1 ? setStep(step - 1) : router.back())}
             className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
           >
@@ -252,7 +252,7 @@ function OrderForm() {
               Langkah {step} dari {STEPS.length}
             </p>
           </div>
-          <Link href="/dashboard" className="text-ink-muted p-2 hover:bg-surface rounded-full">
+          <Link aria-label="Tutup" href="/dashboard" className="text-ink-muted p-2 hover:bg-surface rounded-full">
             <X size={18} />
           </Link>
         </header>

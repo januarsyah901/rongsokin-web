@@ -114,6 +114,7 @@ export default function PengepulDetailPage() {
           <button
             onClick={() => router.back()}
             className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
+            aria-label="Kembali"
           >
             <ArrowLeft size={22} />
           </button>
@@ -123,6 +124,7 @@ export default function PengepulDetailPage() {
           <button
             onClick={handleShare}
             className="p-2 -mr-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
+            aria-label="Bagikan"
           >
             <Share2 size={22} />
           </button>

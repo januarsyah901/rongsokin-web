@@ -110,7 +110,7 @@ export default function VerifyKtpPage() {
       <DesktopNav />
 
       <header className="sticky top-0 z-40 bg-surface-raised border-b border-ink-faint px-4 py-3 flex items-center gap-3 md:hidden">
-        <Link href="/profile" className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full">
+        <Link aria-label="Kembali" href="/profile" className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full">
           <ArrowLeft size={22} />
         </Link>
         <h1 className="font-display font-extrabold text-lg tracking-tight text-ink">
@@ -214,10 +214,10 @@ export default function VerifyKtpPage() {
                   )}
 
                   <div>
-                    <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <label htmlFor="verify-nik" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       NIK <Lock size={11} className="text-ink-muted" />
                     </label>
-                    <Input
+                    <Input id="verify-nik"
                       type="text"
                       inputMode="numeric"
                       placeholder="Otomatis dari KTP…"
@@ -234,10 +234,10 @@ export default function VerifyKtpPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+                    <label htmlFor="verify-nama-lengkap-sesuai-ktp" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
                       Nama Lengkap (sesuai KTP)
                     </label>
-                    <Input
+                    <Input id="verify-nama-lengkap-sesuai-ktp"
                       type="text"
                       placeholder="Nama sesuai KTP"
                       value={ktpName}

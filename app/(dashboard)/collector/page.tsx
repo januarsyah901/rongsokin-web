@@ -591,7 +591,7 @@ export default function CollectorDashboard() {
             size={20}
             buttonClassName="relative p-2 text-ink-muted hover:text-ink transition-colors rounded-full hover:bg-surface cursor-pointer"
           />
-          <button
+          <button aria-label="Keluar"
             onClick={handleLogout}
             className="p-2 text-ink-muted hover:text-status-error transition-colors rounded-full hover:bg-surface cursor-pointer"
           >
@@ -644,8 +644,12 @@ export default function CollectorDashboard() {
               </div>
             </div>
             <button
+              type="button"
+              role="switch"
+              aria-checked={!!profile?.isOpen}
+              aria-label={profile?.isOpen ? "Tutup lapak" : "Buka lapak"}
               onClick={handleToggleOpen}
-              disabled={needsVerify}
+              disabled={needsVerify || updateProfile.isPending}
               className={`w-16 h-8 rounded-full p-1 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 profile?.isOpen ? "bg-brand-500" : "bg-surface-sunken"
               }`}

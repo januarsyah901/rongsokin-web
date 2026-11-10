@@ -202,7 +202,7 @@ export default function EditProfilePage() {
 
       {/* MOBILE HEADER */}
       <header className="sticky top-0 z-40 bg-surface-raised border-b border-ink-faint px-4 py-3 flex items-center gap-3 md:hidden">
-        <Link
+        <Link aria-label="Kembali"
           href="/profile"
           className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
         >
@@ -331,10 +331,10 @@ export default function EditProfilePage() {
             </h3>
 
             <div>
-              <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+              <label htmlFor="edit-nama-lengkap" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                 Nama Lengkap
               </label>
-              <Input
+              <Input id="edit-nama-lengkap"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -344,10 +344,10 @@ export default function EditProfilePage() {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+              <label htmlFor="edit-email" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                 Email
               </label>
-              <Input
+              <Input id="edit-email"
                 type="email"
                 value={me?.email || ""}
                 disabled
@@ -357,10 +357,10 @@ export default function EditProfilePage() {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+              <label htmlFor="edit-nomor-whatsapp" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                 Nomor WhatsApp
               </label>
-              <Input
+              <Input id="edit-nomor-whatsapp"
                 type="tel"
                 inputMode="numeric"
                 value={phone}
@@ -380,10 +380,10 @@ export default function EditProfilePage() {
               </h3>
 
               <div>
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+                <label htmlFor="edit-nama-lapak" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                   Nama Lapak
                 </label>
-                <Input
+                <Input id="edit-nama-lapak"
                   type="text"
                   value={shopName}
                   onChange={(e) => setShopName(e.target.value)}
@@ -393,10 +393,10 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+                <label htmlFor="edit-deskripsi-lapak" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                   Deskripsi Lapak
                 </label>
-                <textarea
+                <textarea id="edit-deskripsi-lapak"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ceritakan singkat soal lapakmu…"

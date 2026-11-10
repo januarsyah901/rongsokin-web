@@ -102,10 +102,10 @@ function ResetPasswordInner() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest block">
+                <label htmlFor="reset-kata-sandi-baru" className="text-[10px] font-bold text-mute uppercase tracking-widest block">
                   Kata Sandi Baru
                 </label>
-                <Input
+                <Input id="reset-kata-sandi-baru"
                   type="password"
                   placeholder="••••••••"
                   value={password}
@@ -116,10 +116,10 @@ function ResetPasswordInner() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest block">
+                <label htmlFor="reset-konfirmasi-kata-sandi-ba" className="text-[10px] font-bold text-mute uppercase tracking-widest block">
                   Konfirmasi Kata Sandi Baru
                 </label>
-                <Input
+                <Input id="reset-konfirmasi-kata-sandi-ba"
                   type="password"
                   placeholder="••••••••"
                   value={confirmPassword}
