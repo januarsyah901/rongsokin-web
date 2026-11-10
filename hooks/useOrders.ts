@@ -3,6 +3,7 @@ import { AxiosError } from 'axios';
 import api from '@/lib/axios';
 import { Order } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { getApiStatus } from '@/lib/apiError';
 
 // Endpoint yang belum di-deploy → jangan bikin UI error, anggap data kosong dulu
 const isMissingRoute = (err: unknown): boolean => {
@@ -135,9 +136,18 @@ export const useUpdateOrderStatus = (id: string) => {
       const res = await api.patch<{ status: string; data: unknown }>(`/orders/${id}`, body);
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, payload) => {
       queryClient.invalidateQueries({ queryKey: ['order', id] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      if (payload.action === 'confirm') queryClient.invalidateQueries({ queryKey: ['ecoLeaderboard'] });
+    },
+    onError: (err) => {
+      // 409 = status di server sudah berubah (aksi pihak lain / double submit) →
+      // tarik data terbaru supaya tombol yang tampil sesuai status sebenarnya.
+      if (getApiStatus(err) === 409 || getApiStatus(err) === 400) {
+        queryClient.invalidateQueries({ queryKey: ['order', id] });
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+      }
     },
   });
 };

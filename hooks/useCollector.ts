@@ -29,6 +29,8 @@ export interface CatalogItemPayload {
 
 export const useCollectorProfile = () => {
   const token = useAuthStore((state) => state.token);
+  // Hanya pengepul yang punya profil lapak — customer dulu ikut memanggil & kena 403.
+  const isCollector = useAuthStore((state) => state.user?.role === 'COLLECTOR');
 
   return useQuery({
     queryKey: ['collectorProfile'],
@@ -36,8 +38,15 @@ export const useCollectorProfile = () => {
       const res = await api.get<{ status: string; data: CollectorProfile }>('/collector/profile');
       return res.data.data;
     },
-    enabled: !!token,
+    enabled: !!token && isCollector,
   });
+};
+
+/** Data lapak tampil di pencarian & profil publik → ikut disegarkan. */
+const invalidateCollectorViews = (qc: ReturnType<typeof useQueryClient>) => {
+  qc.invalidateQueries({ queryKey: ['collectorProfile'] });
+  qc.invalidateQueries({ queryKey: ['collectors'] });
+  qc.invalidateQueries({ queryKey: ['collectorDetails'] });
 };
 
 export const useUpdateCollectorProfile = () => {
@@ -54,14 +63,12 @@ export const useUpdateCollectorProfile = () => {
       if (payload.lat !== undefined) formatted.lat = payload.lat;
       if (payload.lng !== undefined) formatted.lng = payload.lng;
 
-      // Gunakan POST untuk create, PATCH untuk update
-      const res = await api.post<{ status: string; data: CollectorProfile }>('/collector/profile', formatted)
-        .catch(() => api.patch<{ status: string; data: CollectorProfile }>('/collector/profile', formatted));
+      // POST = upsert di BE. Dulu error apa pun (422/429/403) memicu PATCH ulang
+      // yang sama — request ganda & pesan error asli hilang.
+      const res = await api.post<{ status: string; data: CollectorProfile }>('/collector/profile', formatted);
       return res.data.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collectorProfile'] });
-    },
+    onSuccess: () => invalidateCollectorViews(queryClient),
   });
 };
 
@@ -79,8 +86,6 @@ export const useUpdateCatalogs = () => {
       const res = await api.patch<{ status: string; data: CollectorCatalog[] }>('/collector/catalogs', formatted);
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collectorProfile'] });
-    },
+    onSuccess: () => invalidateCollectorViews(queryClient),
   });
 };
