@@ -56,6 +56,7 @@ import {
 import { Star, MapPin } from "lucide-react";
 import { Order } from "@/types";
 import toast from "react-hot-toast";
+import { methodLabel } from "@/lib/orderStatus";
 import { getApiErrorMessage } from "@/lib/apiError";
 
 const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
@@ -102,36 +103,34 @@ function IncomingOrderCard({
       toast.error("Verifikasi KTP dulu sebelum menerima pesanan.");
       return;
     }
-    updateOrderStatus.mutate(
-      { action: "accept" },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
-          onRemove(order.id);
-          router.push(`/orders/${order.id}`);
-        },
-        onError: (err: unknown) => {
-          toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "accept" })
+      .then(() => {
+        toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
+        onRemove(order.id);
+        router.push(`/orders/${order.id}`);
+      })
+      .catch((err: unknown) => {
+        toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
+      });
   };
 
   const handleReject = () => {
-    updateOrderStatus.mutate(
-      { action: "reject" },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan ditolak.");
-          onRemove(order.id);
-        },
-        // Dulu error pun ditampilkan "Pesanan ditolak." & kartu dihapus — padahal
-        // di server order masih tercatat untuk pengepul ini & muncul lagi saat polling.
-        onError: (err: unknown) => {
-          toast.error(getApiErrorMessage(err, "Gagal menolak pesanan."));
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "reject" })
+      .then(() => {
+        toast.success("Pesanan ditolak.");
+        onRemove(order.id);
+      })
+      .catch((err: unknown) => {
+        toast.error(getApiErrorMessage(err, "Gagal menolak pesanan."));
+      });
   };
 
   const minutes = Math.floor(timeLeft / 60);
@@ -158,7 +157,7 @@ function IncomingOrderCard({
               {getOrderCategoryLabel(order)}
             </h4>
             <p className="text-[10px] text-ink-muted font-medium mt-0.5 font-mono">
-              est. {getOrderTotalEstWeight(order).toFixed(1)} kg • {order.method}
+              est. {getOrderTotalEstWeight(order).toFixed(1)} kg • {methodLabel(order.method)}
             </p>
           </div>
         </div>
@@ -285,19 +284,19 @@ function RequestRow({
       toast.error("Verifikasi KTP dulu sebelum menerima pesanan.");
       return;
     }
-    updateOrderStatus.mutate(
-      { action: "accept" },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
-          onAccepted(order.id);
-          router.push(`/orders/${order.id}`);
-        },
-        onError: (err: unknown) => {
-          toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "accept" })
+      .then(() => {
+        toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
+        onAccepted(order.id);
+        router.push(`/orders/${order.id}`);
+      })
+      .catch((err: unknown) => {
+        toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
+      });
   };
 
   const items = getOrderItems(order);
@@ -391,7 +390,7 @@ function RequestRow({
       <td className="p-3 text-ink-muted font-mono font-medium hidden sm:table-cell">{distance}</td>
       <td className="p-3 hidden md:table-cell">
         <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-surface text-ink-muted">
-          {order.method}
+          {methodLabel(order.method)}
         </span>
       </td>
       <td className="p-3 text-right">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { methodLabel } from "@/lib/orderStatus";
 import { useState, useEffect } from "react";
 import { useMe } from "@/hooks/useAuth";
 import { useUserCoords } from "@/hooks/useUserCoords";
@@ -250,7 +251,7 @@ export default function CustomerDashboard() {
                   {getOrderTotalEstWeight(activeOrder).toFixed(1)} kg
                 </p>
                 <p className="text-[10px] text-forest-muted">
-                  {formatDate(activeOrder.createdAt)} · {activeOrder.method}
+                  {formatDate(activeOrder.createdAt)} · {methodLabel(activeOrder.method)}
                 </p>
               </div>
               <ChevronRight size={18} className="text-brand-500 shrink-0" />

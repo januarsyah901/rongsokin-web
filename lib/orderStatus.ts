@@ -1,4 +1,4 @@
-import type { Order, OrderStatus } from '@/types';
+import type { Order, OrderMethod, OrderStatus } from '@/types';
 
 /** Label singkat status pesanan (badge riwayat/dashboard). Satu sumber kebenaran. */
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
@@ -42,3 +42,12 @@ export const getOrderStatusLabel = (order: Pick<Order, 'status' | 'collectorId'>
 
 /** Nomor pesanan pendek yang konsisten di seluruh UI. */
 export const shortOrderId = (id: string) => `#${id.slice(-5).toUpperCase()}`;
+
+/** Label metode serah-terima (dulu tampil mentah "PICKUP"/"DROPOFF"). */
+export const ORDER_METHOD_LABEL: Record<OrderMethod, string> = {
+  PICKUP: 'Dijemput',
+  DROPOFF: 'Antar Sendiri',
+};
+
+export const methodLabel = (m?: string) =>
+  (m && ORDER_METHOD_LABEL[m as OrderMethod]) || m || '—';

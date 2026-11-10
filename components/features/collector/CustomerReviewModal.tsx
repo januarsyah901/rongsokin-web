@@ -17,6 +17,7 @@ import { useUserRatings } from "@/hooks/useRatings";
 import { getOrderItems, getOrderTotalEstWeight, formatDistance, formatDate } from "@/lib/utils";
 import { Order } from "@/types";
 import toast from "react-hot-toast";
+import { methodLabel } from "@/lib/orderStatus";
 import { getApiErrorMessage } from "@/lib/apiError";
 
 /** Bintang read-only untuk skor 0..5 */
@@ -64,35 +65,35 @@ export default function CustomerReviewModal({ order, canAccept = true, onClose, 
       toast.error("Verifikasi KTP dulu sebelum menerima pesanan.");
       return;
     }
-    updateOrderStatus.mutate(
-      { action: "accept" },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
-          onDone(order.id);
-          router.push(`/orders/${order.id}`);
-        },
-        onError: (err: unknown) => {
-          toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "accept" })
+      .then(() => {
+        toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
+        onDone(order.id);
+        router.push(`/orders/${order.id}`);
+      })
+      .catch((err: unknown) => {
+        toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
+      });
   };
 
   const reject = () => {
-    updateOrderStatus.mutate(
-      { action: "reject" },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan ditolak.");
-          onDone(order.id);
-        },
-        onError: () => {
-          toast.success("Pesanan ditolak.");
-          onDone(order.id);
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "reject" })
+      .then(() => {
+        toast.success("Pesanan ditolak.");
+        onDone(order.id);
+      })
+      .catch((err: unknown) => {
+        // Dulu gagal pun ditampilkan sukses & kartu dihapus.
+        toast.error(getApiErrorMessage(err, "Gagal menolak pesanan."));
+      });
   };
 
   return (
@@ -158,7 +159,7 @@ export default function CustomerReviewModal({ order, canAccept = true, onClose, 
                 Pesanan
               </span>
               <span className="text-[9px] font-extrabold uppercase tracking-wider bg-surface-raised text-ink-muted px-2 py-0.5 rounded-full">
-                {order.method}
+                {methodLabel(order.method)}
               </span>
             </div>
             {items.map((it) => (
