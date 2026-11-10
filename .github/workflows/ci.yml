@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        # Masih ada error lint lama (any, setState-in-effect) yang sedang dibereskan
+        # di branch ui-upgrade. Ubah jadi blocking setelah baseline bersih.
+        run: npx eslint .
+        continue-on-error: true
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://rongsokin.hallojanu.me/api/v1
+          NEXT_PUBLIC_SOCKET_URL: https://rongsokin.hallojanu.me
+      - name: Docker image builds
+        run: docker build -q -t rongsokin-web:ci .
+
+# Deploy ke server: jalankan deploy/deploy.sh di server (runner self-hosted
+# hanya terdaftar untuk org mrfroglab, bukan repo ini).
