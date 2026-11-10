@@ -51,7 +51,7 @@ ensure_secret JWT_SECRET 64
 ensure_secret KYC_ATTESTATION_SECRET 64
 ensure_secret SEED_ADMIN_PASSWORD 24
 ensure_default GEMINI_API_KEY ""
-ensure_default GEMINI_MODEL "gemini-2.5-flash"
+ensure_default GEMINI_MODEL "gemini-3.8-flash"
 ( umask 077; grep -vE '^SITE_URL=' "$STACK/.env" > "$STACK/.env.tmp" || true
   printf 'SITE_URL=%s\n' "$SITE_URL" >> "$STACK/.env.tmp" )
 mv "$STACK/.env.tmp" "$STACK/.env"; chmod 600 "$STACK/.env"

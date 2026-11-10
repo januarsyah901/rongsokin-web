@@ -8,8 +8,16 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 // Model bisa diganti tanpa ubah kode lewat env GEMINI_MODEL.
-// Default: gemini-2.5-flash (tier gratis, stabil). gemini-2.0-flash sudah di-shutdown.
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+// Default: gemini-3.8-flash (gemini-2.5-flash sudah tak tersedia untuk key baru).
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Cadangan bila model utama 503/404 (dipisah koma, bisa diubah lewat env).
+const MODELS = [
+  MODEL,
+  ...(process.env.GEMINI_FALLBACK_MODELS || "gemini-3.1-flash-lite,gemini-flash-lite-latest,gemini-3.5-flash")
+    .split(",")
+    .map((m) => m.trim())
+    .filter((m) => m && m !== MODEL),
+];
 
 const PROMPT = `Kamu pembaca KTP Indonesia. Dari gambar ini, ekstrak NIK (16 digit angka) dan Nama lengkap pemilik.
 Balas HANYA dengan JSON valid, tanpa teks atau penjelasan lain, bentuk persis:
@@ -96,45 +104,96 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "bad_mime" }, { status: 400 });
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-
-  let geminiRes: Response;
-  try {
-    geminiRes = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { inline_data: { mime_type: mimeType, data: imageBase64 } },
-              { text: PROMPT },
-            ],
-          },
+  const requestBody = JSON.stringify({
+    contents: [
+      {
+        parts: [
+          { inline_data: { mime_type: mimeType, data: imageBase64 } },
+          { text: PROMPT },
         ],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 },
-      }),
-    });
-  } catch {
-    return NextResponse.json({ error: "gemini_unreachable" }, { status: 502 });
-  }
+      },
+    ],
+    generationConfig: { responseMimeType: "application/json", temperature: 0 },
+  });
 
-  if (!geminiRes.ok) {
-    // Detail error Gemini cukup di log server — jangan bocorkan ke client.
-    const detail = await geminiRes.text().catch(() => "");
-    console.error("Gemini error", geminiRes.status, detail.slice(0, 300));
+  // Semua model dipanggil PARALEL. Tanda tangan KYC hanya terbit bila minimal
+  // DUA model berbeda membaca NIK yang persis sama: model (terutama "lite")
+  // bisa berhalusinasi NIK dari gambar kosong, tapi dua halusinasi yang
+  // kebetulan identik 16 digit praktis mustahil.
+  const reads = (await Promise.all(MODELS.map((m) => readKtp(m, apiKey, requestBody)))).filter(
+    (r): r is KtpRead => r !== null
+  );
+  if (reads.length === 0) {
     return NextResponse.json({ error: "gemini_error" }, { status: 502 });
   }
 
-  const data = await geminiRes.json().catch(() => null);
+  const readable = reads.filter((r) => r.terbaca);
+  const votes = new Map<string, KtpRead[]>();
+  for (const r of readable) votes.set(r.nik, [...(votes.get(r.nik) || []), r]);
+  const [bestNik, bestReads] = [...votes.entries()].sort((a, b) => b[1].length - a[1].length)[0] || ["", []];
+  const agreed = bestReads.length >= 2;
+
+  if (agreed) {
+    const nama = bestReads.find((r) => r.nama)?.nama || "";
+    return NextResponse.json({
+      nik: bestNik,
+      nama,
+      terbaca: true,
+      alasan: "",
+      attestation: signKycAttestation(bestNik, nama),
+    });
+  }
+
+  // Tidak ada kesepakatan → jangan terbitkan bukti. Kalau hasil antar model
+  // berbeda, besar kemungkinan foto tidak jelas / bukan KTP.
+  const conflicting = votes.size > 1 || (readable.length > 0 && readable.length < reads.length);
+  return NextResponse.json({
+    nik: "",
+    nama: "",
+    terbaca: false,
+    alasan: conflicting
+      ? "Hasil pembacaan KTP tidak konsisten. Foto ulang dengan lebih jelas."
+      : reads.find((r) => r.alasan)?.alasan || "Foto kurang jelas",
+    attestation: null,
+  });
+}
+
+interface KtpRead {
+  nik: string;
+  nama: string;
+  terbaca: boolean;
+  alasan: string;
+}
+
+async function readKtp(model: string, apiKey: string, body: string): Promise<KtpRead | null> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body,
+        signal: AbortSignal.timeout(20_000),
+      }
+    );
+  } catch (err) {
+    console.error("Gemini unreachable", model, (err as Error).message);
+    return null;
+  }
+  if (!res.ok) {
+    // Detail error Gemini cukup di log server — jangan bocorkan ke client.
+    const detail = await res.text().catch(() => "");
+    console.error("Gemini error", model, res.status, detail.slice(0, 200));
+    return null;
+  }
+
+  const data = await res.json().catch(() => null);
   const parts = data?.candidates?.[0]?.content?.parts;
   const text: string | undefined = Array.isArray(parts)
     ? (parts.find((p: { text?: string }) => typeof p?.text === "string")?.text ?? undefined)
     : undefined;
-
-  if (!text) {
-    return NextResponse.json({ error: "empty_response" }, { status: 502 });
-  }
+  if (!text) return null;
 
   let parsed: { nik?: unknown; nama?: unknown; terbaca?: unknown; alasan?: unknown } | null = null;
   try {
@@ -150,21 +209,14 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-  if (!parsed) {
-    return NextResponse.json({ error: "parse_failed" }, { status: 502 });
-  }
+  if (!parsed) return null;
 
   const nikDigits = String(parsed.nik ?? "").replace(/\D/g, "");
   const nik = nikDigits.length === 16 ? nikDigits : "";
-  const nama = String(parsed.nama ?? "").trim().toUpperCase();
-  const terbaca = parsed.terbaca === true && nik.length === 16;
-
-  return NextResponse.json({
+  return {
     nik,
-    nama,
-    terbaca,
-    alasan: terbaca ? "" : String(parsed.alasan ?? "Foto kurang jelas"),
-    // Bukti bertanda tangan untuk BE — hanya bila NIK benar-benar terbaca.
-    attestation: terbaca ? signKycAttestation(nik, nama) : null,
-  });
+    nama: String(parsed.nama ?? "").trim().toUpperCase(),
+    terbaca: parsed.terbaca === true && nik.length === 16,
+    alasan: String(parsed.alasan ?? ""),
+  };
 }

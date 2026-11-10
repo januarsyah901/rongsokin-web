@@ -62,7 +62,7 @@ services:
       NODE_ENV: production
       KYC_ATTESTATION_SECRET: ${KYC_ATTESTATION_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
     networks: [gateway-net]
 
 networks:
