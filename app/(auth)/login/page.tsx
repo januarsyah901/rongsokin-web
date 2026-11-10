@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -10,9 +10,28 @@ import { Logo } from "@/components/ui/Logo";
 import { useLogin } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/apiError";
+import type { UserRole } from "@/types";
+
+const homeFor = (role: UserRole) =>
+  role === "ADMIN" ? "/admin" : role === "COLLECTOR" ? "/collector" : "/dashboard";
+
+/** Hanya path internal (cegah open redirect lewat ?next=//evil.com). */
+const safeNext = (next: string | null) =>
+  next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : null;
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
+  const expired = searchParams.get("expired") === "1";
   const { mutate: login, isPending } = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,10 +46,9 @@ export default function LoginPage() {
       {
         onSuccess: (data) => {
           toast.success(`Selamat datang kembali, ${data.data.user.name}!`);
-          const role = data.data.user.role;
-          const target =
-            role === "ADMIN" ? "/admin" : role === "COLLECTOR" ? "/collector" : "/dashboard";
-          router.push(target);
+          // Kembali ke halaman asal (mis. link notifikasi) bila ada; guard layout
+          // tetap mengalihkan bila halaman itu bukan untuk peran ini.
+          router.replace(next || homeFor(data.data.user.role));
         },
         onError: (err: unknown) => {
           const errMsg = getApiErrorMessage(err, "Login gagal. Silakan coba lagi.");
@@ -58,19 +76,37 @@ export default function LoginPage() {
           <p className="text-sm text-ink-muted mt-1.5">Lanjutkan perjalanan cuanmu.</p>
         </div>
 
+        {expired && !error && (
+          <div
+            role="status"
+            className="mb-5 p-3 bg-status-warning/15 rounded-xl text-ink text-xs font-semibold text-center"
+          >
+            Sesi kamu telah berakhir. Silakan masuk kembali.
+          </div>
+        )}
+
         {error && (
-          <div className="mb-5 p-3 bg-status-error/10 rounded-xl text-status-error text-xs font-semibold text-center">
+          <div
+            role="alert"
+            className="mb-5 p-3 bg-status-error/10 rounded-xl text-status-error text-xs font-semibold text-center"
+          >
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+            <label
+              htmlFor="login-email"
+              className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block"
+            >
               Email
             </label>
             <Input
+              id="login-email"
               type="email"
+              autoComplete="email"
+              inputMode="email"
               placeholder="budi@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -78,11 +114,16 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+            <label
+              htmlFor="login-password"
+              className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block"
+            >
               Kata Sandi
             </label>
             <Input
+              id="login-password"
               type="password"
+              autoComplete="current-password"
               placeholder="Masukkan kata sandi"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

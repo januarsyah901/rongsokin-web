@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, Star, MessageSquare, User as UserIcon } from "lucide-react";
 import DesktopNav from "@/components/ui/DesktopNav";
 import BottomNav from "@/components/ui/BottomNav";
@@ -13,8 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import { formatDate } from "@/lib/utils";
 
 export default function MyReviewsPage() {
-  const router = useRouter();
-  const token = useAuthStore((s) => s.token);
+
   const initFromStorage = useAuthStore((s) => s.initFromStorage);
 
   useEffect(() => {
@@ -23,11 +21,6 @@ export default function MyReviewsPage() {
 
   const { data: me, isLoading: isMeLoading } = useMe();
   const { data: ratings, isLoading: isRatingsLoading } = useUserRatings(me?.id);
-
-  if (!token) {
-    router.push("/login");
-    return null;
-  }
 
   if (isMeLoading) {
     return <ProfileEditSkeleton />;

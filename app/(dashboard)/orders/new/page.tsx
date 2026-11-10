@@ -232,11 +232,6 @@ function OrderForm() {
   const canGoStep4 = !!method && !!lat && !!lng;
   const canSubmit = canGoStep2 && canGoStep3 && canGoStep4;
 
-  if (!token) {
-    router.push("/login");
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-surface pb-20 md:pb-0">
       <DesktopNav />

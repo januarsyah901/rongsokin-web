@@ -31,7 +31,6 @@ import { uploadToCloudinary } from "@/lib/upload";
 export default function EditProfilePage() {
   const router = useRouter();
   const initFromStorage = useAuthStore((s) => s.initFromStorage);
-  const token = useAuthStore((s) => s.token);
 
   useEffect(() => {
     initFromStorage();
@@ -190,11 +189,6 @@ export default function EditProfilePage() {
       setIsSaving(false);
     }
   };
-
-  if (!token) {
-    router.push("/login");
-    return null;
-  }
 
   const isPageLoading = isMeLoading || (isCollector && isProfileLoading);
 

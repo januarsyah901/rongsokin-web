@@ -1,10 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import RealtimeBridge from "@/components/providers/RealtimeBridge";
+import type { UserRole } from "@/types";
+
+/** Beranda tiap peran. */
+const homeFor = (role?: UserRole) =>
+  role === "ADMIN" ? "/admin" : role === "COLLECTOR" ? "/collector" : "/dashboard";
+
+/** Halaman yang boleh dibuka tanpa login (profil lapak publik). */
+const isPublicPath = (pathname: string) => pathname.startsWith("/pengepul");
+
+/**
+ * Hitung tujuan redirect (atau null bila boleh tampil). Dihitung saat render —
+ * bukan disimpan di state — supaya tidak ada setState di effect & tidak ada
+ * kedipan konten terlarang sebelum redirect.
+ */
+function guardRedirect(pathname: string, token: string | null, role?: UserRole): string | null {
+  if (!token) {
+    if (isPublicPath(pathname)) return null;
+    return `/login?next=${encodeURIComponent(pathname)}`;
+  }
+  const startsWith = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
+  if (startsWith("/admin") && role !== "ADMIN") return homeFor(role);
+  if (startsWith("/collector") && role !== "COLLECTOR") return homeFor(role);
+  if (startsWith("/dashboard") && role !== "CUSTOMER") return homeFor(role);
+  // Buat setoran hanya untuk customer
+  if (startsWith("/orders/new") && role !== "CUSTOMER") return homeFor(role);
+  return null;
+}
 
 export default function DashboardLayout({
   children,
@@ -14,46 +41,21 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const initFromStorage = useAuthStore((state) => state.initFromStorage);
-  const user = useAuthStore((state) => state.user);
-  const [isChecking, setIsChecking] = useState(true);
+  const hydrated = useAuthStore((state) => state.hydrated);
+  const token = useAuthStore((state) => state.token);
+  const role = useAuthStore((state) => state.user?.role);
 
   useEffect(() => {
     initFromStorage();
-    
-    const storedToken = localStorage.getItem("token");
-    const storedUserStr = localStorage.getItem("user");
-    const isPublicPath = pathname.startsWith("/pengepul");
-    
-    if (!storedToken && !isPublicPath) {
-      router.push("/login");
-      return;
-    }
+  }, [initFromStorage]);
 
-    // Role guard: /collector/* hanya untuk COLLECTOR
-    if (storedToken && storedUserStr) {
-      try {
-        const storedUser = JSON.parse(storedUserStr);
-        const role = storedUser?.role;
+  const redirect = hydrated ? guardRedirect(pathname, token, role) : null;
 
-        if (pathname.startsWith("/collector") && role !== "COLLECTOR") {
-          router.push("/dashboard");
-          return;
-        }
+  useEffect(() => {
+    if (redirect) router.replace(redirect);
+  }, [redirect, router]);
 
-        // /dashboard hanya untuk CUSTOMER
-        if (pathname.startsWith("/dashboard") && role === "COLLECTOR") {
-          router.push("/collector");
-          return;
-        }
-      } catch {
-        // invalid user data
-      }
-    }
-
-    setIsChecking(false);
-  }, [initFromStorage, router, pathname]);
-
-  if (isChecking) {
+  if (!hydrated || redirect) {
     return <PageSkeleton />;
   }
 

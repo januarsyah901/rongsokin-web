@@ -32,7 +32,6 @@ type OcrStatus = "idle" | "scanning" | "done" | "failed";
 export default function VerifyKtpPage() {
   const router = useRouter();
   const initFromStorage = useAuthStore((s) => s.initFromStorage);
-  const token = useAuthStore((s) => s.token);
 
   useEffect(() => {
     initFromStorage();
@@ -50,11 +49,6 @@ export default function VerifyKtpPage() {
   const [ktpName, setKtpName] = useState("");
   const [ocrStatus, setOcrStatus] = useState<OcrStatus>("idle");
   const [fieldsLocked, setFieldsLocked] = useState(false);
-
-  if (!token) {
-    router.push("/login");
-    return null;
-  }
 
   const handleKtpCapture = async (blob: Blob, dataUrl: string) => {
     setKtpPreview(dataUrl);
