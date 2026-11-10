@@ -39,7 +39,7 @@ import { Input } from "@/components/ui/Input";
 import { OrderDetailSkeleton } from "@/components/ui/Skeleton";
 import { useAuthStore } from "@/store/authStore";
 import { useOrderDetails, useUpdateOrderStatus } from "@/hooks/useOrders";
-import { getSocket } from "@/lib/socket";
+import { getSocket, joinRoom } from "@/lib/socket";
 import {
   formatRupiah,
   formatDate,
@@ -115,14 +115,16 @@ export default function OrderTrackingPage() {
   useEffect(() => {
     if (!token || !id) return;
     const socket = getSocket(token);
-    socket.emit("join_room", `order:${id}`);
+    // Join ulang otomatis saat reconnect — kalau tidak, status berhenti
+    // ter-update diam-diam setelah koneksi HP sempat putus.
+    const leaveRoom = joinRoom(socket, `order:${id}`);
 
     // Cukup refetch — JANGAN toast generik di sini. Tiap aksi (terima/sampai/
     // timbang/setujui/batal) sudah punya toast spesifik & jelas sendiri di
     // handler onSuccess masing-masing; broadcast socket dari aksi sendiri balik
     // ke room ini dan dulu memicu toast KEDUA yang membingungkan ("Status
     // pesanan diperbarui menjadi COMPLETED!") menumpuk di atas toast spesifik.
-    const handleStatusUpdate = (payload: { orderId: string; status: any }) => {
+    const handleStatusUpdate = (payload: { orderId: string; status: unknown }) => {
       if (payload.orderId === id) {
         refetch();
       }
@@ -134,6 +136,7 @@ export default function OrderTrackingPage() {
     return () => {
       socket.off("order_status_update", handleStatusUpdate);
       socket.off("order_status_updated", handleStatusUpdate);
+      leaveRoom();
     };
   }, [token, id, refetch]);
 

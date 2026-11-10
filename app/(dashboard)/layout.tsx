@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { PageSkeleton } from "@/components/ui/Skeleton";
+import RealtimeBridge from "@/components/providers/RealtimeBridge";
 
 export default function DashboardLayout({
   children,
@@ -56,5 +57,10 @@ export default function DashboardLayout({
     return <PageSkeleton />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <RealtimeBridge />
+      {children}
+    </>
+  );
 }

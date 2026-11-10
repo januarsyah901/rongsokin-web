@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useOrdersList } from '@/hooks/useOrders';
 import { useNotificationStore } from '@/store/notificationStore';
 import { Order, OrderStatus } from '@/types';
+import { isViewingOrder } from '@/hooks/useSocket';
 
 const NOTIF_ICON = '/eco_impact_badge.png';
 
@@ -41,6 +42,10 @@ function statusInfo(
       return isCollector
         ? { title: 'Pesanan masuk daftar aktif', body: 'Kamu menerima sebuah setoran. Siapkan penjemputan/penimbangan.' }
         : { title: 'Pesanan diterima! 🎉', body: 'Pengepul menerima setoranmu dan segera memprosesnya.' };
+    case 'ON_THE_WAY':
+      return isCollector
+        ? { title: 'Pesanan diterima — dalam perjalanan', body: 'Lanjutkan ke lokasi & koordinasi via WhatsApp bila perlu.' }
+        : { title: 'Pesanan diterima! 🎉', body: 'Pengepul menerima setoranmu. Pantau perjalanannya di peta.' };
     case 'IN_PROGRESS':
       return isCollector
         ? { title: 'Transaksi berjalan', body: 'Lanjutkan ke proses penimbangan setoran.' }
@@ -89,9 +94,11 @@ export function useNotifications() {
 
   // Order milik sendiri (untuk deteksi perubahan status). Background-polling ON
   // supaya notifikasi tetap muncul walau tab tidak aktif.
+  // Pengepul WAJIB kirim role=collector — tanpa itu BE mengembalikan order di mana
+  // dia sebagai customer (kosong), jadi notifikasi status pengepul tak pernah muncul.
   const { data: myOrders } = useOrdersList(
-    { limit: 50 },
-    { refetchInterval: enabled ? 10000 : undefined, refetchIntervalInBackground: true }
+    { limit: 50, role: isCollector ? 'collector' : undefined },
+    { refetchInterval: enabled ? 10000 : undefined, refetchIntervalInBackground: true, enabled }
   );
   // Antrean broadcast PENDING (hanya pengepul) — deteksi pesanan baru
   const { data: pending } = useOrdersList(
@@ -99,6 +106,7 @@ export function useNotifications() {
     {
       refetchInterval: enabled && isCollector ? 10000 : undefined,
       refetchIntervalInBackground: true,
+      enabled: enabled && isCollector,
     }
   );
 
@@ -140,7 +148,7 @@ export function useNotifications() {
         href: `/orders/${o.id}`,
         createdAt: new Date().toISOString(),
       });
-      if (added) {
+      if (added && !isViewingOrder(o.id)) {
         toast(info.title, { icon: '🔔' });
         fireBrowserNotif(info.title, info.body, o.id);
       }

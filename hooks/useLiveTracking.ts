@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getSocket } from '@/lib/socket';
+import { getSocket, joinRoom } from '@/lib/socket';
 import { useAuthStore } from '@/store/authStore';
 import { haversineMeters } from '@/lib/utils';
 import { Order } from '@/types';
@@ -32,10 +32,14 @@ export function useLiveTracking({
   onAutoArrive?: () => void;
 }): LatLng | null {
   const token = useAuthStore((s) => s.token);
-  const [livePos, setLivePos] = useState<LatLng | null>(null);
+  // Posisi disimpan bersama "sesi" pelacakannya; begitu sesi berganti/berhenti,
+  // posisi lama otomatis tak dipakai (tanpa setState di dalam effect).
+  const [live, setLive] = useState<{ session: string; pos: LatLng } | null>(null);
   const arrivedRef = useRef(false);
   const cbRef = useRef(onAutoArrive);
-  cbRef.current = onAutoArrive;
+  useEffect(() => {
+    cbRef.current = onAutoArrive;
+  }, [onAutoArrive]);
 
   // Live tracking aktif saat DALAM PERJALANAN (ON_THE_WAY). CONFIRMED tetap didukung
   // untuk order lama yang belum lewat alur "Dalam Perjalanan".
@@ -46,21 +50,22 @@ export function useLiveTracking({
   const destLat = moverIsCollector ? order?.customerLat : order?.collectorLat;
   const destLng = moverIsCollector ? order?.customerLng : order?.collectorLng;
 
+  const session = `${orderId}:${iAmMover ? 'mover' : 'watcher'}`;
+
   useEffect(() => {
     if (!enabled || !token) {
-      setLivePos(null);
       arrivedRef.current = false;
       return;
     }
     const socket = getSocket(token);
-    socket.emit('join_room', `order:${orderId}`);
+    const leaveRoom = joinRoom(socket, `order:${orderId}`);
 
     if (iAmMover) {
-      if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+      if (typeof navigator === 'undefined' || !navigator.geolocation) return leaveRoom;
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
           const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setLivePos(p);
+          setLive({ session, pos: p });
           socket.emit('location_update', { orderId, lat: p.lat, lng: p.lng, role });
           if (destLat != null && destLng != null && !arrivedRef.current) {
             const dist = haversineMeters(p, { lat: destLat, lng: destLng });
@@ -75,20 +80,24 @@ export function useLiveTracking({
         },
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
       );
-      return () => navigator.geolocation.clearWatch(watchId);
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+        leaveRoom();
+      };
     }
 
     // Pihak menunggu: terima posisi lawan
     const handler = (payload: { orderId?: string; lat?: number; lng?: number }) => {
       if (payload?.orderId === orderId && payload.lat != null && payload.lng != null) {
-        setLivePos({ lat: payload.lat, lng: payload.lng });
+        setLive({ session, pos: { lat: payload.lat, lng: payload.lng } });
       }
     };
     socket.on('location_update', handler);
     return () => {
       socket.off('location_update', handler);
+      leaveRoom();
     };
-  }, [enabled, iAmMover, orderId, token, role, destLat, destLng]);
+  }, [enabled, iAmMover, orderId, token, role, destLat, destLng, session]);
 
-  return livePos;
+  return enabled && live?.session === session ? live.pos : null;
 }

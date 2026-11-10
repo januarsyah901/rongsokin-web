@@ -1,48 +1,73 @@
 import { useEffect } from 'react';
-import { getSocket, disconnectSocket } from '@/lib/socket';
+import { getSocket, disconnectSocket, joinRoom } from '@/lib/socket';
 import { useAuthStore } from '@/store/authStore';
 import { useOrderStore } from '@/store/orderStore';
 import { useNotificationStore } from '@/store/notificationStore';
-import { Order, OrderItem } from '@/types';
+import { ORDER_STATUS_SENTENCE, isOrderStatus, shortOrderId } from '@/lib/orderStatus';
+import { Order, OrderItem, OrderMethod, WasteCategory } from '@/types';
 import { toast } from 'react-hot-toast';
 
-const STATUS_LABEL_ID: Record<string, string> = {
-  CONFIRMED: 'diterima pengepul',
-  ON_THE_WAY: 'dalam perjalanan',
-  IN_PROGRESS: 'sudah sampai — sedang ditimbang',
-  AWAITING_CONFIRMATION: 'menunggu konfirmasimu',
-  COMPLETED: 'selesai',
-  CANCELLED: 'dibatalkan',
-};
+/** Payload event `new_order` — BE baru (items[]) maupun legacy (category tunggal). */
+interface NewOrderPayload {
+  orderId: string;
+  collectorId?: string | null;
+  method?: OrderMethod;
+  createdAt?: string;
+  photo_url?: string;
+  photoUrl?: string;
+  category?: string;
+  estWeight?: number | string;
+  items?: Array<{
+    id?: string;
+    categoryId: string;
+    estimatedWeight?: number | string;
+    estWeight?: number | string;
+    category?: WasteCategory;
+  }>;
+}
 
+interface StatusPayload {
+  orderId: string;
+  status: unknown;
+}
+
+/** Sedang membuka halaman detail order ini? (toast spesifik sudah ditampilkan di sana) */
+export const isViewingOrder = (orderId: string) =>
+  typeof window !== 'undefined' && window.location.pathname === `/orders/${orderId}`;
+
+/**
+ * Listener socket global (notifikasi pesanan baru & perubahan status). Dipasang
+ * SEKALI di layout dashboard lewat <RealtimeBridge /> supaya tetap aktif di
+ * semua halaman, bukan hanya saat dasbor terbuka.
+ */
 export const useSocket = () => {
   const token = useAuthStore((state) => state.token);
-  const user = useAuthStore((state) => state.user);
+  const userId = useAuthStore((state) => state.user?.id);
+  const role = useAuthStore((state) => state.user?.role);
   const addIncomingOrder = useOrderStore((state) => state.addIncomingOrder);
+  const removeIncomingOrder = useOrderStore((state) => state.removeIncomingOrder);
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   const addNotification = useNotificationStore((state) => state.add);
 
   useEffect(() => {
-    if (!token || !user) {
+    if (!token || !userId) {
       disconnectSocket();
       return;
     }
 
     const socket = getSocket(token);
 
-    // Join appropriate room for notifications
-    if (user.role === 'COLLECTOR') {
-      socket.emit('join_room', `collector:${user.id}`);
-    } else {
-      socket.emit('join_room', `customer:${user.id}`);
-    }
+    // Room pribadi untuk notifikasi — di-join ulang otomatis tiap reconnect.
+    const leaveRoom = joinRoom(
+      socket,
+      role === 'COLLECTOR' ? `collector:${userId}` : `customer:${userId}`
+    );
 
-    // Handle new order received (Collector) — support BE legacy (single category)
-    // dan BE baru (items array). Total weight di-aggregate dari items kalau ada.
-    socket.on('new_order', (payload: any) => {
-      // Items dari payload baru, atau derive dari legacy single field
+    // Pesanan baru (Collector) — dukung BE legacy (single category) & BE baru (items[]).
+    const handleNewOrder = (payload: NewOrderPayload) => {
+      if (!payload?.orderId) return;
       const items: OrderItem[] = Array.isArray(payload.items)
-        ? payload.items.map((it: any) => ({
+        ? payload.items.map((it) => ({
             id: it.id || it.categoryId,
             orderId: payload.orderId,
             categoryId: it.categoryId,
@@ -62,72 +87,79 @@ export const useSocket = () => {
 
       const totalWeight = items.reduce((s, i) => s + i.estimatedWeight, 0);
 
-      const mockOrder: Order = {
+      const incoming: Order = {
         id: payload.orderId,
         customerId: '',
-        // War (broadcast) = null/undefined; Forward (private, dipilih langsung
-        // dari lapak) = userId pengepul. Dulu field ini tak dikirim BE sama sekali
-        // → order forward sempat tampil sbg War sampai polling REST membetulkan.
+        // War (broadcast) = null/undefined; Forward (private) = userId pengepul.
         collectorId: payload.collectorId || undefined,
-        method: payload.method,
+        method: payload.method ?? 'DROPOFF',
         status: 'PENDING',
-        // Pakai createdAt ASLI dari BE supaya countdown 15 menit akurat sejak awal.
-        // Fallback ke waktu event tiba hanya kalau BE lama belum mengirimnya.
+        // createdAt ASLI dari BE supaya countdown 15 menit akurat sejak awal.
         createdAt: payload.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         items,
-        // Foto live tumpukan rongsok (anti pesanan fiktif) — pengepul wajib lihat
+        // Foto live tumpukan rongsok (anti pesanan fiktif)
         photoUrl: payload.photo_url || payload.photoUrl,
-        // Legacy fallback untuk komponen yang masih baca categoryId/estimatedWeight
         categoryId: items[0]?.categoryId,
         estimatedWeight: totalWeight,
       };
 
-      addIncomingOrder(mockOrder);
-      toast.success(`Pesanan Baru Masuk! ${totalWeight.toFixed(1)} kg`, {
-        icon: '♻️',
-        duration: 5000,
+      addIncomingOrder(incoming);
+      const isNew = addNotification({
+        id: `new_order:${payload.orderId}`,
+        userId,
+        type: 'new_order',
+        title: 'Pesanan baru masuk',
+        body: `Estimasi ${totalWeight.toFixed(1)} kg — cek antreanmu.`,
+        href: '/collector',
+        createdAt: new Date().toISOString(),
       });
-      if (user) {
-        addNotification({
-          id: `new_order:${payload.orderId}`,
-          userId: user.id,
-          type: 'new_order',
-          title: 'Pesanan baru masuk',
-          body: `Estimasi ${totalWeight.toFixed(1)} kg — cek antreanmu.`,
-          href: '/collector',
-          createdAt: new Date().toISOString(),
-        });
-      }
-    });
-
-    // Handle order status update
-    const handleStatusUpdate = (payload: { orderId: string; status: any }) => {
-      updateOrderStatus(payload.orderId, payload.status);
-      const label = STATUS_LABEL_ID[payload.status] || payload.status;
-      toast(`Status pesanan ${payload.orderId.slice(0, 5)}... berubah menjadi ${payload.status}`, {
-        icon: "♻️",
-      });
-      if (user) {
-        addNotification({
-          id: `status:${payload.orderId}:${payload.status}`,
-          userId: user.id,
-          type: 'status',
-          title: 'Status pesanan diperbarui',
-          body: `Pesanan #${payload.orderId.slice(-5).toUpperCase()} kini ${label}.`,
-          href: `/orders/${payload.orderId}`,
-          createdAt: new Date().toISOString(),
+      if (isNew) {
+        toast.success(`Pesanan baru masuk! Estimasi ${totalWeight.toFixed(1)} kg`, {
+          icon: '♻️',
+          duration: 5000,
         });
       }
     };
 
+    // Order diambil pengepul lain / dibatalkan → hilangkan dari antrean seketika.
+    const handleOrderTaken = (payload: { orderId?: string }) => {
+      if (payload?.orderId) removeIncomingOrder(payload.orderId);
+    };
+
+    const handleStatusUpdate = (payload: StatusPayload) => {
+      if (!payload?.orderId || !isOrderStatus(payload.status)) return;
+      const status = payload.status;
+      updateOrderStatus(payload.orderId, status);
+      const sentence = `Pesanan ${shortOrderId(payload.orderId)} kini ${ORDER_STATUS_SENTENCE[status]}.`;
+      const isNew = addNotification({
+        id: `status:${payload.orderId}:${status}`,
+        userId,
+        type: 'status',
+        title: 'Status pesanan diperbarui',
+        body: sentence,
+        href: `/orders/${payload.orderId}`,
+        createdAt: new Date().toISOString(),
+      });
+      // Halaman detail pesanan sudah punya toast spesifik per aksi → jangan dobel.
+      if (isNew && !isViewingOrder(payload.orderId)) {
+        toast(sentence, { icon: '♻️' });
+      }
+    };
+
+    socket.on('new_order', handleNewOrder);
+    socket.on('order_taken', handleOrderTaken);
     socket.on('order_status_update', handleStatusUpdate);
-    socket.on('order_status_updated', handleStatusUpdate); // double-handle for compatibility
+    socket.on('order_status_updated', handleStatusUpdate); // nama event lama
 
     return () => {
-      socket.off('new_order');
-      socket.off('order_status_update');
-      socket.off('order_status_updated');
+      // Lepas HANYA handler milik hook ini — dulu socket.off('event') tanpa
+      // handler ikut mencopot listener halaman lain (mis. detail pesanan).
+      leaveRoom();
+      socket.off('new_order', handleNewOrder);
+      socket.off('order_taken', handleOrderTaken);
+      socket.off('order_status_update', handleStatusUpdate);
+      socket.off('order_status_updated', handleStatusUpdate);
     };
-  }, [token, user, addIncomingOrder, updateOrderStatus, addNotification]);
+  }, [token, userId, role, addIncomingOrder, removeIncomingOrder, updateOrderStatus, addNotification]);
 };

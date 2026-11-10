@@ -35,7 +35,6 @@ import { Button } from "@/components/ui/Button";
 import { CollectorSkeleton } from "@/components/ui/Skeleton";
 import { useAuthStore } from "@/store/authStore";
 import { useMe } from "@/hooks/useAuth";
-import { useSocket } from "@/hooks/useSocket";
 import { useOrderStore } from "@/store/orderStore";
 import { useOrdersList, useUpdateOrderStatus } from "@/hooks/useOrders";
 import {
@@ -425,8 +424,6 @@ export default function CollectorDashboard() {
   useEffect(() => {
     initFromStorage();
   }, [initFromStorage]);
-
-  useSocket();
 
   const incomingOrders = useOrderStore((state) => state.incomingOrders);
   const removeIncomingOrder = useOrderStore((state) => state.removeIncomingOrder);

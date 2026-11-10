@@ -15,7 +15,6 @@ import {
   getOrderTotalPrice,
   getOrderCategoryLabel,
 } from "@/lib/utils";
-import { useSocket } from "@/hooks/useSocket";
 import RadiusPicker, { RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/components/features/discovery/RadiusPicker";
 import DesktopNav from "@/components/ui/DesktopNav";
 import BottomNav from "@/components/ui/BottomNav";
@@ -82,8 +81,6 @@ export default function CustomerDashboard() {
       router.replace("/collector");
     }
   }, [token, user, router]);
-
-  useSocket();
 
   const { data: me, isLoading: isMeLoading } = useMe();
   const { data: orders, isLoading: isOrdersLoading } = useOrdersList({ limit: 50 });
