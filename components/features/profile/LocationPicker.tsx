@@ -41,8 +41,9 @@ export default function LocationPicker({
   autoLocate = false,
 }: Props) {
   const [isLocating, setIsLocating] = useState(false);
-  const [areaName, setAreaName] = useState<string>("");
-  const [areaLoading, setAreaLoading] = useState(false);
+  // Hasil geocode disimpan bersama koordinat asalnya; "loading" = hasil belum
+  // untuk titik saat ini (diturunkan saat render, tanpa setState di effect).
+  const [area, setArea] = useState<{ key: string; name: string } | null>(null);
   const didAutoLocate = useRef(false);
 
   const handleUseGPS = (silent = false) => {
@@ -91,21 +92,21 @@ export default function LocationPicker({
   const current = value || DEFAULT_COORDS;
 
   // Reverse-geocode (debounce) → nama daerah s.d. kecamatan tiap kali titik berubah
-  const geocodeReq = useRef(0);
+  const areaKey = `${current.lat.toFixed(6)},${current.lng.toFixed(6)}`;
+  const areaLoading = area?.key !== areaKey;
+  const areaName = areaLoading ? "" : area?.name ?? "";
   useEffect(() => {
-    const lat = current.lat;
-    const lng = current.lng;
-    setAreaLoading(true);
-    const reqId = ++geocodeReq.current;
+    let cancelled = false;
     const t = setTimeout(async () => {
-      const info = await reverseGeocode(lat, lng);
-      if (reqId !== geocodeReq.current) return; // hasil basi → abaikan
-      setAreaName(info?.label || "");
-      setAreaLoading(false);
+      const info = await reverseGeocode(current.lat, current.lng);
+      if (!cancelled) setArea({ key: areaKey, name: info?.label || "" }); // hasil basi → abaikan
     }, 700);
-    return () => clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current.lat, current.lng]);
+  }, [areaKey]);
 
   return (
     <div className="space-y-3">

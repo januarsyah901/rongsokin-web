@@ -2,7 +2,7 @@
 
 Marketplace daur ulang sampah berbasis geolokasi yang menghubungkan **penjual sampah (Customer)** dengan **pengepul (Collector)** di sekitar Yogyakarta. Dibuat untuk **Lomba OLIVIA XI 2026**.
 
-🔗 **Live:** [rongsokin.vercel.app](https://rongsokin.vercel.app)
+🔗 **Live:** [rongsokin.hallojanu.me](https://rongsokin.hallojanu.me) (self-hosted — web & API satu origin, API di `/api/v1`)
 
 ## Fitur Utama
 
@@ -35,22 +35,33 @@ npm install
 npm run dev
 ```
 
-Copy `.env.example` menjadi `.env.local` — nilainya sudah terisi BE production (publik, sama seperti yang dipakai [rongsokin.vercel.app](https://rongsokin.vercel.app)), jadi bisa langsung jalan tanpa perlu minta kredensial apa pun:
+Frontend butuh backend [be-rongsok.in](https://github.com/januarsyah901/be-rongsok.in) yang berjalan lokal. Jalankan BE di port 4000 (port 3000 dipakai Next.js), lalu copy `.env.example` menjadi `.env.local`:
 
 ```bash
+# di repo backend
+PORT=4000 npm run dev
+
+# di repo ini
 cp .env.example .env.local
+npm run dev
 ```
 
 Isi `.env.example`:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://be-rongsokin.hallojanu.xyz/api/v1
-NEXT_PUBLIC_SOCKET_URL=https://be-rongsokin.hallojanu.xyz
+NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+NEXT_PUBLIC_SOCKET_URL=http://localhost:4000
 
 # OCR KTP (opsional — tanpa ini otomatis fallback ke Tesseract.js)
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
+
+# Harus sama dengan KYC_ATTESTATION_SECRET di backend (min 32 karakter)
+KYC_ATTESTATION_SECRET=
 ```
+
+> Jangan arahkan `.env.local` ke API produksi untuk development — API produksi
+> membatasi CORS ke origin `https://rongsokin.hallojanu.me` dan memakai data asli.
 
 Aplikasi berjalan di [http://localhost:3000](http://localhost:3000).
 

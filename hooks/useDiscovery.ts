@@ -86,6 +86,22 @@ export const useCategoryTree = () => {
   return { ...tree, isLoading, error };
 };
 
+/** Baris mentah dari GET /discovery/search (raw SQL di BE → angka bisa string). */
+interface RawSearchRow {
+  id: string;
+  userId: string;
+  shopName: string;
+  description?: string | null;
+  priorityScore?: number;
+  avgRating?: number | string | null;
+  ownerName?: string;
+  shopImageUrl?: string | null;
+  avatarUrl?: string | null;
+  distance: number | string;
+  ownerVerified?: boolean | null;
+  isVerified?: boolean | null;
+}
+
 export const useSearchCollectors = (params: SearchQueryParams) => {
   const { data: categories } = useWasteCategories();
 
@@ -103,14 +119,14 @@ export const useSearchCollectors = (params: SearchQueryParams) => {
       }
 
       const fetchWithin = async (radiusKm: number) => {
-        const queryParams: Record<string, any> = {
+        const queryParams: Record<string, string | number> = {
           lat: params.lat,
           lng: params.lng,
           radius: radiusKm,
         };
         if (activeCategoryId) queryParams.categoryId = activeCategoryId;
 
-        const res = await api.get<{ status: string; data: any[] }>('/discovery/search', {
+        const res = await api.get<{ status: string; data: RawSearchRow[] }>('/discovery/search', {
           params: queryParams,
         });
 
@@ -119,8 +135,8 @@ export const useSearchCollectors = (params: SearchQueryParams) => {
           id: c.id,
           userId: c.userId,
           shopName: c.shopName,
-          description: c.description,
-          priorityScore: c.priorityScore,
+          description: c.description ?? undefined,
+          priorityScore: Number(c.priorityScore ?? 0),
           avgRating: c.avgRating != null ? Number(c.avgRating) : 0,
           ownerName: c.ownerName,
           shopImageUrl: c.shopImageUrl || null, // photo banner di halaman detil

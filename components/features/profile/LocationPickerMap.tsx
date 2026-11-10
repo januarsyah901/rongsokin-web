@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MAP_TILE_URL, MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM } from "@/lib/mapTiles";
 import "leaflet/dist/leaflet.css";
 
 interface LatLng {
@@ -51,12 +52,12 @@ export default function LocationPickerMap({ value, onChange, height = 300 }: Pro
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
         zoomControl={false}
-        attributionControl={false}
       >
-        {/* Tile terang minimalis — jalan saja, tanpa satelit/rumah (CARTO Positron) */}
+        {/* Tile OpenStreetMap (CARTO kini wajib API key) */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          subdomains={["a", "b", "c", "d"]}
+          url={MAP_TILE_URL}
+          attribution={MAP_TILE_ATTRIBUTION}
+          maxZoom={MAP_TILE_MAX_ZOOM}
         />
         <RecenterOnValue value={value} />
         <CenterReporter onChange={onChange} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DesktopNav from "@/components/ui/DesktopNav";
@@ -24,7 +24,6 @@ import {
   Droplets,
   FileText,
   LogOut,
-  CreditCard,
   ArrowDownRight,
   Eye,
   ShieldAlert,
@@ -35,7 +34,6 @@ import { Button } from "@/components/ui/Button";
 import { CollectorSkeleton } from "@/components/ui/Skeleton";
 import { useAuthStore } from "@/store/authStore";
 import { useMe } from "@/hooks/useAuth";
-import { useSocket } from "@/hooks/useSocket";
 import { useOrderStore } from "@/store/orderStore";
 import { useOrdersList, useUpdateOrderStatus } from "@/hooks/useOrders";
 import {
@@ -58,8 +56,10 @@ import {
 import { Star, MapPin } from "lucide-react";
 import { Order } from "@/types";
 import toast from "react-hot-toast";
+import { methodLabel } from "@/lib/orderStatus";
+import { getApiErrorMessage } from "@/lib/apiError";
 
-const mainIcon = (name: string): any => {
+const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
   if (name.includes("Plastik")) return RefreshCw;
   if (name.includes("Kertas") || name.includes("Kardus")) return Box;
   if (name.includes("Logam") || name.includes("Besi")) return Wrench;
@@ -93,7 +93,6 @@ function IncomingOrderCard({
   const [timeLeft, setTimeLeft] = useState(computeLeft);
 
   useEffect(() => {
-    setTimeLeft(computeLeft());
     const timer = setInterval(() => setTimeLeft(computeLeft()), 1000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,35 +103,34 @@ function IncomingOrderCard({
       toast.error("Verifikasi KTP dulu sebelum menerima pesanan.");
       return;
     }
-    updateOrderStatus.mutate(
-      { action: "accept" },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
-          onRemove(order.id);
-          router.push(`/orders/${order.id}`);
-        },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal menerima pesanan.");
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "accept" })
+      .then(() => {
+        toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
+        onRemove(order.id);
+        router.push(`/orders/${order.id}`);
+      })
+      .catch((err: unknown) => {
+        toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
+      });
   };
 
   const handleReject = () => {
-    updateOrderStatus.mutate(
-      { action: "reject" as any },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan ditolak.");
-          onRemove(order.id);
-        },
-        onError: () => {
-          toast.success("Pesanan ditolak.");
-          onRemove(order.id);
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "reject" })
+      .then(() => {
+        toast.success("Pesanan ditolak.");
+        onRemove(order.id);
+      })
+      .catch((err: unknown) => {
+        toast.error(getApiErrorMessage(err, "Gagal menolak pesanan."));
+      });
   };
 
   const minutes = Math.floor(timeLeft / 60);
@@ -159,7 +157,7 @@ function IncomingOrderCard({
               {getOrderCategoryLabel(order)}
             </h4>
             <p className="text-[10px] text-ink-muted font-medium mt-0.5 font-mono">
-              est. {getOrderTotalEstWeight(order).toFixed(1)} kg • {order.method}
+              est. {getOrderTotalEstWeight(order).toFixed(1)} kg • {methodLabel(order.method)}
             </p>
           </div>
         </div>
@@ -266,13 +264,11 @@ function IncomingOrderCard({
 // ── Request table row (own hook — fixes Rules of Hooks) ──────────────────
 function RequestRow({
   order,
-  index,
   onAccepted,
   onOpenDetail,
   canAccept = true,
 }: {
   order: Order;
-  index: number;
   onAccepted: (id: string) => void;
   onOpenDetail: (order: Order) => void;
   canAccept?: boolean;
@@ -280,30 +276,27 @@ function RequestRow({
   const router = useRouter();
   const [showPhoto, setShowPhoto] = useState(false);
   const updateOrderStatus = useUpdateOrderStatus(order.id);
-  // Jarak asli dari BE (km). Fallback estimasi berbasis urutan bila BE belum kirim.
-  const distance =
-    order.distanceKm != null
-      ? formatDistance(order.distanceKm * 1000)
-      : `~${((index + 1) * 0.8).toFixed(1)} km`;
+  // Jarak asli dari BE (km). Tanpa data → "—" (dulu angka karangan dari urutan baris).
+  const distance = order.distanceKm != null ? formatDistance(order.distanceKm * 1000) : "—";
 
   const handleAccept = () => {
     if (!canAccept) {
       toast.error("Verifikasi KTP dulu sebelum menerima pesanan.");
       return;
     }
-    updateOrderStatus.mutate(
-      { action: "accept" },
-      {
-        onSuccess: () => {
-          toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
-          onAccepted(order.id);
-          router.push(`/orders/${order.id}`);
-        },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal menerima pesanan.");
-        },
-      }
-    );
+    // mutateAsync: callback per-mutate() tidak dipanggil bila komponen sudah
+    // unmount — kartu bisa hilang duluan via socket 'order_taken' sebelum respons
+    // tiba, sehingga redirect/toast dulu tak pernah terjadi.
+    updateOrderStatus
+      .mutateAsync({ action: "accept" })
+      .then(() => {
+        toast.success("Pesanan diterima! Mengarahkan ke pelacakan…");
+        onAccepted(order.id);
+        router.push(`/orders/${order.id}`);
+      })
+      .catch((err: unknown) => {
+        toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
+      });
   };
 
   const items = getOrderItems(order);
@@ -375,7 +368,7 @@ function RequestRow({
           </div>
         )}
       </td>
-      <td className="p-3">
+      <td className="p-3 hidden md:table-cell">
         <div className="flex flex-wrap gap-1 max-w-[160px]">
           {items.length > 0 ? (
             items.map((it) => (
@@ -394,10 +387,10 @@ function RequestRow({
       <td className="p-3 font-extrabold font-mono text-ink">
         {getOrderTotalEstWeight(order).toFixed(1)} kg
       </td>
-      <td className="p-3 text-ink-muted font-mono font-medium">{distance}</td>
-      <td className="p-3">
+      <td className="p-3 text-ink-muted font-mono font-medium hidden sm:table-cell">{distance}</td>
+      <td className="p-3 hidden md:table-cell">
         <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-surface text-ink-muted">
-          {order.method}
+          {methodLabel(order.method)}
         </span>
       </td>
       <td className="p-3 text-right">
@@ -424,8 +417,6 @@ export default function CollectorDashboard() {
   useEffect(() => {
     initFromStorage();
   }, [initFromStorage]);
-
-  useSocket();
 
   const incomingOrders = useOrderStore((state) => state.incomingOrders);
   const removeIncomingOrder = useOrderStore((state) => state.removeIncomingOrder);
@@ -482,26 +473,24 @@ export default function CollectorDashboard() {
   const updateCatalogs = useUpdateCatalogs();
 
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(false);
-  const [editedCatalogs, setEditedCatalogs] = useState<
-    Record<string, { minPrice: number; maxPrice: number; isActive: boolean }>
-  >({});
-
-  // Init harga per kategori
-  useEffect(() => {
-    if (mains.length > 0) {
-      const initial: typeof editedCatalogs = {};
-      mains.forEach((cat) => {
-        const existing = profile?.catalogs?.find((c) => c.categoryId === cat.id);
-        initial[cat.id] = {
-          minPrice: existing?.minPrice ?? 1000,
-          maxPrice: existing?.maxPrice ?? 2000,
-          isActive: existing?.isActive ?? false,
-        };
-      });
-      setEditedCatalogs(initial);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, mains.length]);
+  type CatalogDraft = { minPrice: number; maxPrice: number; isActive: boolean };
+  // Hanya EDITAN user yang disimpan di state; nilai dasar diturunkan dari profil.
+  // Dulu seluruh draf di-reset tiap profil di-refetch (mis. setelah buka/tutup
+  // lapak) sehingga harga yang belum disimpan hilang — plus setState di effect.
+  const [catalogEdits, setCatalogEdits] = useState<Record<string, Partial<CatalogDraft>>>({});
+  const editedCatalogs = useMemo(() => {
+    const merged: Record<string, CatalogDraft> = {};
+    mains.forEach((cat) => {
+      const existing = profile?.catalogs?.find((c) => c.categoryId === cat.id);
+      merged[cat.id] = {
+        minPrice: existing?.minPrice ?? 1000,
+        maxPrice: existing?.maxPrice ?? 2000,
+        isActive: existing?.isActive ?? false,
+        ...catalogEdits[cat.id],
+      };
+    });
+    return merged;
+  }, [mains, profile, catalogEdits]);
 
   const today = new Date().toDateString();
   const completedToday =
@@ -541,17 +530,22 @@ export default function CollectorDashboard() {
   };
 
   const handleValChange = (catId: string, field: "minPrice" | "maxPrice", val: number) => {
-    setEditedCatalogs((prev) => ({ ...prev, [catId]: { ...prev[catId], [field]: val } }));
+    setCatalogEdits((prev) => ({ ...prev, [catId]: { ...prev[catId], [field]: val } }));
   };
 
   const handleToggleCatalogActive = (catId: string) => {
-    setEditedCatalogs((prev) => ({
-      ...prev,
-      [catId]: { ...prev[catId], isActive: !prev[catId]?.isActive },
-    }));
+    const next = !editedCatalogs[catId]?.isActive;
+    setCatalogEdits((prev) => ({ ...prev, [catId]: { ...prev[catId], isActive: next } }));
   };
 
   const handleSaveCatalogs = () => {
+    const invalid = Object.values(editedCatalogs).find(
+      (c) => c.isActive && (!(c.minPrice > 0) || !(c.maxPrice > 0) || c.minPrice > c.maxPrice)
+    );
+    if (invalid) {
+      toast.error("Harga minimum harus > 0 dan tidak boleh melebihi harga maksimum.");
+      return;
+    }
     const payload = Object.entries(editedCatalogs).map(([categoryId, data]) => ({
       categoryId,
       minPrice: Number(data.minPrice),
@@ -561,8 +555,8 @@ export default function CollectorDashboard() {
 
     updateCatalogs.mutate(payload, {
       onSuccess: () => toast.success("Katalog harga berhasil diperbarui!"),
-      onError: (err: any) =>
-        toast.error(err.response?.data?.message || "Gagal memperbarui katalog."),
+      onError: (err: unknown) =>
+        toast.error(getApiErrorMessage(err, "Gagal memperbarui katalog.")),
     });
   };
 
@@ -596,7 +590,7 @@ export default function CollectorDashboard() {
             size={20}
             buttonClassName="relative p-2 text-ink-muted hover:text-ink transition-colors rounded-full hover:bg-surface cursor-pointer"
           />
-          <button
+          <button aria-label="Keluar"
             onClick={handleLogout}
             className="p-2 text-ink-muted hover:text-status-error transition-colors rounded-full hover:bg-surface cursor-pointer"
           >
@@ -649,8 +643,12 @@ export default function CollectorDashboard() {
               </div>
             </div>
             <button
+              type="button"
+              role="switch"
+              aria-checked={!!profile?.isOpen}
+              aria-label={profile?.isOpen ? "Tutup lapak" : "Buka lapak"}
               onClick={handleToggleOpen}
-              disabled={needsVerify}
+              disabled={needsVerify || updateProfile.isPending}
               className={`w-16 h-8 rounded-full p-1 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 profile?.isOpen ? "bg-brand-500" : "bg-surface-sunken"
               }`}
@@ -688,20 +686,19 @@ export default function CollectorDashboard() {
                 <thead>
                   <tr className="bg-surface border-b border-ink-faint text-mute font-bold text-[10px] uppercase tracking-wider font-mono">
                     <th className="p-3">Nama &amp; Area</th>
-                    <th className="p-3">Kategori</th>
+                    <th className="p-3 hidden md:table-cell">Kategori</th>
                     <th className="p-3">Berat Est.</th>
-                    <th className="p-3">Jarak</th>
-                    <th className="p-3">Metode</th>
+                    <th className="p-3 hidden sm:table-cell">Jarak</th>
+                    <th className="p-3 hidden md:table-cell">Metode</th>
                     <th className="p-3 text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-faint">
                   {warOrders.length > 0 ? (
-                    warOrders.map((order, idx) => (
+                    warOrders.map((order) => (
                       <RequestRow
                         key={order.id}
                         order={order}
-                        index={idx}
                         onAccepted={removeIncomingOrder}
                         onOpenDetail={(o) => setDetailOrderId(o.id)}
                         canAccept={!needsVerify}

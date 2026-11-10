@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Leaf,
@@ -23,8 +22,7 @@ import { co2KmFromKg, ecoTier, rankMedal } from "@/lib/eco";
 import { getOrderTotalActualWeight } from "@/lib/utils";
 
 export default function EcoPage() {
-  const router = useRouter();
-  const token = useAuthStore((s) => s.token);
+
   const user = useAuthStore((s) => s.user);
   const initFromStorage = useAuthStore((s) => s.initFromStorage);
 
@@ -37,11 +35,6 @@ export default function EcoPage() {
   const { data: lb, isLoading: lbLoading } = useEcoLeaderboard();
 
   const [showShare, setShowShare] = useState(false);
-
-  if (!token) {
-    router.push("/login");
-    return null;
-  }
 
   // Dampak sendiri: dihitung dari order COMPLETED (jalan tanpa BE leaderboard),
   // pakai angka BE kalau tersedia (lebih akurat lintas perangkat).
@@ -68,6 +61,7 @@ export default function EcoPage() {
         <Link
           href="/dashboard"
           className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
+          aria-label="Kembali"
         >
           <ArrowLeft size={22} />
         </Link>

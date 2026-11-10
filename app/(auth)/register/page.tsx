@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -26,6 +26,7 @@ import { useRegister } from "@/hooks/useAuth";
 import { useUpdateCollectorProfile } from "@/hooks/useCollector";
 import { scanKtp } from "@/lib/ktpOcr";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 type OcrStatus = "idle" | "scanning" | "done" | "failed";
 
@@ -41,7 +42,11 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
-  const [role, setRole] = useState<"CUSTOMER" | "COLLECTOR" | "">("");
+  // Preselect role dari URL (?role=COLLECTOR) — lazy init, bukan effect.
+  const [role, setRole] = useState<"CUSTOMER" | "COLLECTOR" | "">(() => {
+    const r = searchParams.get("role");
+    return r === "COLLECTOR" || r === "CUSTOMER" ? r : "";
+  });
 
   // Step 2 — Biodata
   const [email, setEmail] = useState("");
@@ -69,13 +74,6 @@ function RegisterForm() {
   const { mutate: register, isPending: isRegistering } = useRegister();
   const { mutate: setupProfile, isPending: isSettingProfile } = useUpdateCollectorProfile();
 
-  // Preselect role dari URL (?role=COLLECTOR)
-  useEffect(() => {
-    const r = searchParams.get("role");
-    if (r === "COLLECTOR" || r === "CUSTOMER") setRole(r);
-  }, [searchParams]);
-
-  const totalSteps = role === "COLLECTOR" ? 4 : 3;
   const stepList = role === "COLLECTOR" ? [1, 2, 3, 4] : [1, 2, 3];
 
   // ── Step 2: biodata → lanjut ke KYC ──────────────────────────────────────
@@ -177,9 +175,7 @@ function RegisterForm() {
           }
         },
         onError: (err: unknown) => {
-          const msg =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            "Registrasi gagal. Coba lagi.";
+          const msg = getApiErrorMessage(err, "Registrasi gagal. Coba lagi.");
           toast.error(msg);
         },
       }
@@ -202,9 +198,7 @@ function RegisterForm() {
           router.push("/collector");
         },
         onError: (err: unknown) => {
-          const msg =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            "Gagal mengatur profil lapak.";
+          const msg = getApiErrorMessage(err, "Gagal mengatur profil lapak.");
           toast.error(msg);
         },
       }
@@ -335,10 +329,10 @@ function RegisterForm() {
           {step === 2 && (
             <form onSubmit={handleBiodataNext} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+                <label htmlFor="register-email" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
                   Email
                 </label>
-                <Input
+                <Input id="register-email"
                   type="email"
                   placeholder="budi@gmail.com"
                   value={email}
@@ -347,10 +341,10 @@ function RegisterForm() {
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+                <label htmlFor="register-nomor-whatsapp" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
                   Nomor WhatsApp
                 </label>
-                <Input
+                <Input id="register-nomor-whatsapp"
                   type="tel"
                   inputMode="numeric"
                   placeholder="08123456789"
@@ -361,10 +355,10 @@ function RegisterForm() {
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+                <label htmlFor="register-kata-sandi" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
                   Kata Sandi
                 </label>
-                <Input
+                <Input id="register-kata-sandi"
                   type="password"
                   placeholder="Minimal 8 karakter"
                   value={password}
@@ -453,10 +447,10 @@ function RegisterForm() {
 
                   {/* NIK — hanya diisi sistem (OCR), tidak bisa diketik manual */}
                   <div>
-                    <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <label htmlFor="register-nik" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       NIK <Lock size={11} className="text-ink-muted" />
                     </label>
-                    <Input
+                    <Input id="register-nik"
                       type="text"
                       inputMode="numeric"
                       placeholder="Otomatis dari KTP…"
@@ -474,10 +468,10 @@ function RegisterForm() {
 
                   {/* Nama — boleh dikoreksi manual kalau OCR keliru */}
                   <div>
-                    <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+                    <label htmlFor="register-nama-lengkap-sesuai-ktp" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
                       Nama Lengkap (sesuai KTP)
                     </label>
-                    <Input
+                    <Input id="register-nama-lengkap-sesuai-ktp"
                       type="text"
                       placeholder="Nama sesuai KTP"
                       value={ktpName}
@@ -527,10 +521,10 @@ function RegisterForm() {
           {step === 4 && (
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+                <label htmlFor="register-nama-lapak" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
                   Nama Lapak
                 </label>
-                <Input
+                <Input id="register-nama-lapak"
                   type="text"
                   placeholder="Contoh: UD Jaya Abadi"
                   value={shopName}
@@ -539,10 +533,10 @@ function RegisterForm() {
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
+                <label htmlFor="register-deskripsi-lapak" className="text-xs font-bold text-ink uppercase tracking-wider mb-2 block">
                   Deskripsi Lapak
                 </label>
-                <textarea
+                <textarea id="register-deskripsi-lapak"
                   className="w-full border border-ink rounded-md bg-surface-raised p-3 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-brand-500 min-h-[80px]"
                   placeholder="Deskripsi singkat lapak Anda…"
                   value={description}

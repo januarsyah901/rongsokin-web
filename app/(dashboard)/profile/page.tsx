@@ -60,7 +60,7 @@ export default function ProfilePage() {
   }
 
   interface MenuItem {
-    icon: any;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
     label: string;
     href?: string;
     toast?: string;

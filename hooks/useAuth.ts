@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AxiosError } from 'axios';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { User, RegisterPayload } from '@/types';
@@ -12,11 +11,21 @@ interface AuthResponse {
   };
 }
 
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  password: string;
+}
+
 export const useLogin = () => {
   const setAuth = useAuthStore((state) => state.setAuth);
-  
+
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: LoginPayload) => {
       const res = await api.post<AuthResponse>('/auth/login', payload);
       return res.data;
     },
@@ -53,14 +62,12 @@ export const useMe = () => {
   });
 };
 
-// ── Update profil user (customer) ────────────────────────────────────────
+// ── Update profil user ───────────────────────────────────────────────────
 /**
- * Endpoint yang dibutuhkan BE: PATCH /auth/me
- *   body: { name?, phone?, avatarUrl?, lat?, lng? }
- *   response: { status, data: User }
- *
- * Selama BE belum siap (return 404/405/501), hook ini akan tetap update
- * authStore lokal supaya UI optimistic; nanti BE jadi → otomatis sync.
+ * PATCH /auth/me — body: { name?, phone?, avatarUrl?, lat?, lng?, nik?, ktpName?, kycAttestation? }
+ * Tidak ada lagi fallback "optimistic" saat endpoint hilang: dulu 404/405/501
+ * dianggap sukses & hanya mengubah localStorage, sehingga user mengira profilnya
+ * tersimpan padahal tidak. Error kini diteruskan ke pemanggil (409, 429, dst).
  */
 export interface UpdateMePayload {
   name?: string;
@@ -74,42 +81,18 @@ export interface UpdateMePayload {
   kycAttestation?: string;
 }
 
-const isMissingRoute = (err: unknown): boolean => {
-  const s = (err as AxiosError | undefined)?.response?.status;
-  return s === 404 || s === 405 || s === 501;
-};
-
 export const useUpdateMe = () => {
   const qc = useQueryClient();
-  const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const setAuth = useAuthStore((s) => s.setAuth);
 
   return useMutation({
     mutationFn: async (payload: UpdateMePayload): Promise<User> => {
-      try {
-        const res = await api.patch<{ status: string; data: User }>('/auth/me', payload);
-        // Status verifikasi SELALU dari server — jangan ditandai verified di sisi client.
-        return res.data.data;
-      } catch (err) {
-        if (isMissingRoute(err)) {
-          // BE belum punya endpoint → simpan ke localStorage user saja
-          if (!user) throw err;
-          // Field KYC sengaja tidak ikut — verifikasi hanya sah dari server.
-          const merged: User = {
-            ...user,
-            name: payload.name ?? user.name,
-            phone: payload.phone ?? user.phone,
-            avatarUrl: payload.avatarUrl ?? user.avatarUrl,
-          } as User;
-          if (token) setAuth(merged, token);
-          return merged;
-        }
-        throw err; // termasuk 409 "Identitas sudah terdaftar." → ditangani pemanggil
-      }
+      const res = await api.patch<{ status: string; data: User }>('/auth/me', payload);
+      // Status verifikasi SELALU dari server — jangan ditandai verified di sisi client.
+      return res.data.data;
     },
     onSuccess: (updated) => {
-      // Sync ke authStore + cache
       if (token) setAuth(updated, token);
       qc.setQueryData(['me'], updated);
       qc.invalidateQueries({ queryKey: ['me'] });
@@ -128,7 +111,7 @@ export const useForgotPassword = () => {
 
 export const useResetPassword = () => {
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: ResetPasswordPayload) => {
       const res = await api.post<{ status: string; message: string }>('/auth/reset-password', payload);
       return res.data;
     },

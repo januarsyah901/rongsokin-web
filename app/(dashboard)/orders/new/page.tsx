@@ -31,6 +31,7 @@ import { useCategoryTree } from "@/hooks/useDiscovery";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 // Ikon per kategori UTAMA (by name)
 const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
@@ -96,19 +97,20 @@ function OrderForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Pre-select dari URL (?category=) — id atau nama kategori
-  useEffect(() => {
-    if (!initCat || mains.length === 0 || items.length > 0) return;
+  // Pre-select dari URL (?category=) — id atau nama kategori. Dijalankan sekali
+  // saat kategori selesai dimuat (penyesuaian state saat render, bukan effect).
+  const [initCatApplied, setInitCatApplied] = useState(false);
+  if (!initCatApplied && initCat && mains.length > 0) {
+    setInitCatApplied(true);
     const cat =
       mains.find((m) => m.id === initCat) ||
       mains.find((m) => m.name.toLowerCase() === initCat.toLowerCase()) ||
       byId[initCat];
-    if (cat) {
+    if (cat && items.length === 0) {
       setItems([{ categoryId: cat.id, weight: "", notes: "" }]);
       setStep(2);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initCat, mains, byId]);
+  }
 
   // ── Toggle kategori (multi-select) ───────────────────────────────────────
   const toggleCategory = (catId: string) => {
@@ -134,8 +136,9 @@ function OrderForm() {
     try {
       const { url } = await uploadToCloudinary(blob);
       setPhotoUrl(url);
-    } catch {
-      toast.error("Gagal mengunggah foto. Foto ulang ya.");
+    } catch (err) {
+      toast.error(`${getApiErrorMessage(err, "Gagal mengunggah foto.")} Foto ulang ya.`);
+      setPhotoUrl("");
       setPhotoPreview("");
     } finally {
       setIsUploading(false);
@@ -210,11 +213,11 @@ function OrderForm() {
               ? `Setoran terkirim ke ${forwardShopName || "pengepul pilihanmu"}! Menunggu persetujuan…`
               : "Setoran berhasil dibuat! Mencari pengepul…"
           );
-          const orderId = (res as any)?.data?.id || (res as any)?.id;
+          const orderId = res?.data?.id;
           router.push(orderId ? `/orders/${orderId}` : "/orders");
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal membuat setoran. Coba kembali.");
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal membuat setoran. Coba kembali."));
         },
       }
     );
@@ -230,11 +233,6 @@ function OrderForm() {
   const canGoStep4 = !!method && !!lat && !!lng;
   const canSubmit = canGoStep2 && canGoStep3 && canGoStep4;
 
-  if (!token) {
-    router.push("/login");
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-surface pb-20 md:pb-0">
       <DesktopNav />
@@ -242,7 +240,7 @@ function OrderForm() {
       <div className="max-w-lg mx-auto bg-surface-raised min-h-screen md:my-6 md:rounded-2xl md:min-h-0">
         {/* MOBILE HEADER */}
         <header className="sticky top-0 z-50 bg-surface-raised border-b border-ink-faint px-4 py-3 flex items-center gap-3 md:hidden md:rounded-t-2xl">
-          <button
+          <button aria-label="Kembali"
             onClick={() => (step > 1 ? setStep(step - 1) : router.back())}
             className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
           >
@@ -254,7 +252,7 @@ function OrderForm() {
               Langkah {step} dari {STEPS.length}
             </p>
           </div>
-          <Link href="/dashboard" className="text-ink-muted p-2 hover:bg-surface rounded-full">
+          <Link aria-label="Tutup" href="/dashboard" className="text-ink-muted p-2 hover:bg-surface rounded-full">
             <X size={18} />
           </Link>
         </header>

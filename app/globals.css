@@ -152,3 +152,24 @@ body {
   -webkit-mask-position: top left, bottom left;
   mask-position: top left, bottom left;
 }
+
+/* ── Fokus keyboard yang terlihat ──────────────────────────────────────── */
+/* Banyak tombol/link kustom tidak punya gaya fokus sama sekali → pengguna
+   keyboard kehilangan posisi. :focus-visible tidak muncul saat diklik/ditap. */
+:where(a, button, [role="button"], [role="switch"], summary, input[type="checkbox"], input[type="radio"], .range-slider):focus-visible {
+  outline: 3px solid var(--color-brand-500);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--color-ink);
+}
+
+/* Hormati preferensi kurangi animasi (sistem operasi). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

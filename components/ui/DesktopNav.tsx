@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell,
   User,
   Home,
   Search,

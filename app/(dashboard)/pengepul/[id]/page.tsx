@@ -13,9 +13,6 @@ import {
   Archive,
   Wrench,
   RefreshCw,
-  FileText,
-  Monitor,
-  Sparkles,
   AlertCircle,
   Box,
   Wine,
@@ -34,7 +31,7 @@ import { useUserCoords } from "@/hooks/useUserCoords";
 import { formatRupiah, formatDate, formatDistance, haversineMeters } from "@/lib/utils";
 import toast from "react-hot-toast";
 
-const getCategoryIcon = (name: string): any => {
+const getCategoryIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
   const n = name.toLowerCase();
   if (n.includes("plastik")) return RefreshCw;
   if (n.includes("kertas") || n.includes("kardus")) return Box;
@@ -117,6 +114,7 @@ export default function PengepulDetailPage() {
           <button
             onClick={() => router.back()}
             className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
+            aria-label="Kembali"
           >
             <ArrowLeft size={22} />
           </button>
@@ -126,6 +124,7 @@ export default function PengepulDetailPage() {
           <button
             onClick={handleShare}
             className="p-2 -mr-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
+            aria-label="Bagikan"
           >
             <Share2 size={22} />
           </button>

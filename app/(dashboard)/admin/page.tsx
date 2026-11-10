@@ -14,11 +14,9 @@ import {
   Plus,
   RefreshCw,
   Scale,
-  ShieldCheck,
   Trash2,
   TrendingUp,
   Users,
-  X,
   AlertTriangle,
   Search,
   Filter,
@@ -39,6 +37,8 @@ import {
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { Order, OrderStatus, WasteCategory } from "@/types";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 const ORDER_STATUS_FILTERS: { label: string; value: string }[] = [
   { label: "Semua", value: "" },
@@ -87,8 +87,6 @@ export default function AdminDashboard() {
     }
   }, [token, user, router]);
 
-  const stats = useAdminStats();
-  const isMocked = (stats.data as { _mocked?: boolean } | undefined)?._mocked;
 
   const handleLogout = () => {
     logout();
@@ -128,13 +126,6 @@ export default function AdminDashboard() {
       </header>
 
       <main className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-6xl w-full mx-auto space-y-8">
-        {isMocked && (
-          <div className="bg-[#fff4cc] rounded-2xl px-4 py-3 flex items-center gap-2.5 text-[#4a3b1c]">
-            <ShieldCheck size={16} className="shrink-0" />
-            <span className="text-xs font-semibold">Mode preview — data dummy sampai endpoint BE siap.</span>
-          </div>
-        )}
-
         <StatsSection />
         <CategoryManager />
         <OrderMonitoring />
@@ -145,7 +136,7 @@ export default function AdminDashboard() {
 
 // ── STATS ────────────────────────────────────────────────────────────────
 function StatsSection() {
-  const { data, isLoading, refetch, isFetching } = useAdminStats();
+  const { data, isLoading, refetch, isFetching, error } = useAdminStats();
 
   if (isLoading) {
     return (
@@ -157,7 +148,16 @@ function StatsSection() {
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <ErrorState
+        title="Gagal memuat statistik"
+        error={error}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
 
   const totalUsers = data.totalCustomers + data.totalCollectors;
   const kpis = [
@@ -282,8 +282,7 @@ function CategoryManager() {
           setNewUnit("kg");
         },
         onError: (err: unknown) => {
-          const e = err as { response?: { data?: { message?: string } } };
-          toast.error(e?.response?.data?.message || "Gagal menambah kategori.");
+          toast.error(getApiErrorMessage(err, "Gagal menambah kategori."));
         },
       }
     );
@@ -310,8 +309,7 @@ function CategoryManager() {
           setEditingId(null);
         },
         onError: (err: unknown) => {
-          const e = err as { response?: { data?: { message?: string } } };
-          toast.error(e?.response?.data?.message || "Gagal mengubah kategori.");
+          toast.error(getApiErrorMessage(err, "Gagal mengubah kategori."));
         },
       }
     );
@@ -324,8 +322,7 @@ function CategoryManager() {
         setConfirmDelete(null);
       },
       onError: (err: unknown) => {
-        const e = err as { response?: { data?: { message?: string } } };
-        toast.error(e?.response?.data?.message || "Gagal menghapus kategori.");
+        toast.error(getApiErrorMessage(err, "Gagal menghapus kategori."));
       },
     });
   };
@@ -515,7 +512,7 @@ function OrderMonitoring() {
   const [searchTerm, setSearchTerm] = useState("");
   const limit = 10;
 
-  const { data, isLoading, isFetching, refetch } = useAdminOrders({
+  const { data, isLoading, isFetching, refetch, error } = useAdminOrders({
     status: statusFilter || undefined,
     page,
     limit,
@@ -544,20 +541,23 @@ function OrderMonitoring() {
           Monitoring Transaksi
         </h3>
 
-        <div className="flex gap-2 items-center">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
+        <div className="flex gap-2 items-center w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" aria-hidden="true" />
             <Input
-              type="text"
+              type="search"
+              aria-label="Cari transaksi"
               placeholder="Cari ID / nama / kategori…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-11 pl-8 w-56 py-2"
+              className="h-11 pl-8 w-full sm:w-56 py-2"
             />
           </div>
           <button
             onClick={() => refetch()}
             disabled={isFetching}
+            aria-label="Muat ulang transaksi"
+            title="Muat ulang"
             className="w-11 h-11 rounded-2xl border border-ink-faint hover:border-ink flex items-center justify-center text-ink-muted hover:text-ink transition-colors cursor-pointer disabled:opacity-50"
           >
             <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
@@ -614,6 +614,17 @@ function OrderMonitoring() {
                     </td>
                   </tr>
                 ))
+              ) : error && !data ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-6">
+                    <ErrorState
+                      title="Gagal memuat transaksi"
+                      error={error}
+                      onRetry={() => refetch()}
+                      retrying={isFetching}
+                    />
+                  </td>
+                </tr>
               ) : filteredData.length > 0 ? (
                 filteredData.map((order) => <OrderRow key={order.id} order={order} />)
               ) : (

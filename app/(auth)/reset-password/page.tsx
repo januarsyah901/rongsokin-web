@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
-import { ArrowLeft, CheckCircle2, Lock } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/ui/Logo";
 import { useResetPassword } from "@/hooks/useAuth";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export default function ResetPasswordPage() {
   return (
@@ -58,9 +59,8 @@ function ResetPasswordInner() {
             router.push("/login");
           }, 3000);
         },
-        onError: (err: any) => {
-          const errMsg =
-            err.response?.data?.message || "Gagal mengatur ulang kata sandi. Tautan mungkin kedaluwarsa.";
+        onError: (err: unknown) => {
+          const errMsg = getApiErrorMessage(err, "Gagal mengatur ulang kata sandi. Tautan mungkin kedaluwarsa.");
           toast.error(errMsg);
         },
       }
@@ -102,10 +102,10 @@ function ResetPasswordInner() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest block">
+                <label htmlFor="reset-kata-sandi-baru" className="text-[10px] font-bold text-mute uppercase tracking-widest block">
                   Kata Sandi Baru
                 </label>
-                <Input
+                <Input id="reset-kata-sandi-baru"
                   type="password"
                   placeholder="••••••••"
                   value={password}
@@ -116,10 +116,10 @@ function ResetPasswordInner() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest block">
+                <label htmlFor="reset-konfirmasi-kata-sandi-ba" className="text-[10px] font-bold text-mute uppercase tracking-widest block">
                   Konfirmasi Kata Sandi Baru
                 </label>
-                <Input
+                <Input id="reset-konfirmasi-kata-sandi-ba"
                   type="password"
                   placeholder="••••••••"
                   value={confirmPassword}

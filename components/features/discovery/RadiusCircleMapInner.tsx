@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Circle, useMap } from "react-leaflet";
+import { MAP_TILE_URL, MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM } from "@/lib/mapTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -53,13 +54,13 @@ export default function RadiusCircleMapInner({ center, radiusKm, height = 180 }:
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={false}
         zoomControl={false}
-        attributionControl={false}
         dragging={false}
         doubleClickZoom={false}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          subdomains={["a", "b", "c", "d"]}
+          url={MAP_TILE_URL}
+          attribution={MAP_TILE_ATTRIBUTION}
+          maxZoom={MAP_TILE_MAX_ZOOM}
         />
         <Circle
           center={[center.lat, center.lng]}

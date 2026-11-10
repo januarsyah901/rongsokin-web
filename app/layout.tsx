@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 import QueryProvider from "@/components/providers/QueryProvider";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const fontDisplay = Manrope({
   variable: "--font-manrope",
@@ -22,9 +23,39 @@ const fontMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rongsokin.hallojanu.me";
+const DESCRIPTION =
+  "Jual rongsok & sampah daur ulang langsung ke pengepul terdekat di Yogyakarta. Dijemput atau antar sendiri, harga transparan, pembayaran tercatat.";
+
 export const metadata: Metadata = {
-  title: "Rongsok.in",
-  description: "Platform Ekosistem Daur Ulang Sirkular",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Rongsok.in — Jual Rongsok ke Pengepul Terdekat",
+    template: "%s · Rongsok.in",
+  },
+  description: DESCRIPTION,
+  applicationName: "Rongsok.in",
+  keywords: ["rongsok", "pengepul", "daur ulang", "sampah", "Yogyakarta", "bank sampah", "jual barang bekas"],
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    siteName: "Rongsok.in",
+    title: "Rongsok.in — Jual Rongsok ke Pengepul Terdekat",
+    description: DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rongsok.in — Jual Rongsok ke Pengepul Terdekat",
+    description: DESCRIPTION,
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0e0f0c",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -41,6 +72,7 @@ export default function RootLayout({
         <QueryProvider>
           {children}
         </QueryProvider>
+        <ConfirmDialog />
         <Toaster
           position="top-center"
           toastOptions={{

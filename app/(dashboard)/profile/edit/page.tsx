@@ -25,12 +25,12 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { DEFAULT_COORDS } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { uploadToCloudinary } from "@/lib/upload";
 
 export default function EditProfilePage() {
   const router = useRouter();
   const initFromStorage = useAuthStore((s) => s.initFromStorage);
-  const token = useAuthStore((s) => s.token);
 
   useEffect(() => {
     initFromStorage();
@@ -90,43 +90,39 @@ export default function EditProfilePage() {
 
   // ── Upload avatar ────────────────────────────────────────────────────────
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      const { url, remote } = await uploadToCloudinary(file);
+      const { url } = await uploadToCloudinary(file);
       setAvatarUrl(url);
-      if (remote) {
-        toast.success("Foto profil diunggah!");
-      } else {
-        toast.success("Foto profil dipilih (Mode demo).");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Gagal unggah foto. Coba lagi.");
+      toast.success("Foto profil diunggah!");
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Gagal unggah foto. Coba lagi."));
     } finally {
       setIsUploading(false);
+      input.value = ""; // izinkan memilih file yang sama lagi
     }
   };
 
   // ── Upload banner ────────────────────────────────────────────────────────
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     setIsUploadingBanner(true);
     try {
-      const { url, remote } = await uploadToCloudinary(file);
+      const { url } = await uploadToCloudinary(file);
       setShopImageUrl(url);
-      if (remote) {
-        toast.success("Foto sampul diunggah!");
-      } else {
-        toast.success("Foto sampul dipilih (Mode demo).");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Gagal unggah foto sampul. Coba lagi.");
+      toast.success("Foto sampul diunggah!");
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, "Gagal unggah foto sampul. Coba lagi."));
     } finally {
       setIsUploadingBanner(false);
+      input.value = "";
     }
   };
 
@@ -188,17 +184,11 @@ export default function EditProfilePage() {
       toast.success("Profil berhasil diperbarui!");
       router.push("/profile");
     } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || "Gagal menyimpan perubahan.");
+      toast.error(getApiErrorMessage(err, "Gagal menyimpan perubahan."));
     } finally {
       setIsSaving(false);
     }
   };
-
-  if (!token) {
-    router.push("/login");
-    return null;
-  }
 
   const isPageLoading = isMeLoading || (isCollector && isProfileLoading);
 
@@ -212,7 +202,7 @@ export default function EditProfilePage() {
 
       {/* MOBILE HEADER */}
       <header className="sticky top-0 z-40 bg-surface-raised border-b border-ink-faint px-4 py-3 flex items-center gap-3 md:hidden">
-        <Link
+        <Link aria-label="Kembali"
           href="/profile"
           className="p-2 -ml-2 text-ink-muted hover:bg-surface rounded-full transition-colors"
         >
@@ -341,10 +331,10 @@ export default function EditProfilePage() {
             </h3>
 
             <div>
-              <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+              <label htmlFor="edit-nama-lengkap" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                 Nama Lengkap
               </label>
-              <Input
+              <Input id="edit-nama-lengkap"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -354,10 +344,10 @@ export default function EditProfilePage() {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+              <label htmlFor="edit-email" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                 Email
               </label>
-              <Input
+              <Input id="edit-email"
                 type="email"
                 value={me?.email || ""}
                 disabled
@@ -367,10 +357,10 @@ export default function EditProfilePage() {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+              <label htmlFor="edit-nomor-whatsapp" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                 Nomor WhatsApp
               </label>
-              <Input
+              <Input id="edit-nomor-whatsapp"
                 type="tel"
                 inputMode="numeric"
                 value={phone}
@@ -390,10 +380,10 @@ export default function EditProfilePage() {
               </h3>
 
               <div>
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+                <label htmlFor="edit-nama-lapak" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                   Nama Lapak
                 </label>
-                <Input
+                <Input id="edit-nama-lapak"
                   type="text"
                   value={shopName}
                   onChange={(e) => setShopName(e.target.value)}
@@ -403,10 +393,10 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
+                <label htmlFor="edit-deskripsi-lapak" className="text-[10px] font-bold text-mute uppercase tracking-widest mb-1.5 block">
                   Deskripsi Lapak
                 </label>
-                <textarea
+                <textarea id="edit-deskripsi-lapak"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ceritakan singkat soal lapakmu…"

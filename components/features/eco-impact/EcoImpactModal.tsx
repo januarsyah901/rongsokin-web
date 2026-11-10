@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { toPng } from "html-to-image";
-import { Sparkles, Download, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Sparkles, Download, ArrowRight, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import { ecoTier, co2KmFromKg } from "@/lib/eco";
 
@@ -37,7 +37,6 @@ export default function EcoImpactModal({
   const computedTier = ecoTier(lifetimeWeight !== undefined ? lifetimeWeight : actualWeight);
   const resolvedBadge = computedTier.badge;
   const resolvedTitle = titleLabel === "Pahlawan Lingkungan" || !titleLabel ? computedTier.label : titleLabel;
-  const periodText = variant === "lifetime" ? "sampah sampai hari ini" : "sampah hari ini";
   const [isDownloading, setIsDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -193,7 +192,7 @@ export default function EcoImpactModal({
             {/* FOOTER */}
             <div className="pt-2 w-full flex justify-between items-center text-[8px] text-brand-300/60 font-mono z-10">
               <span>📍 Yogyakarta, Indonesia</span>
-              <span>rongsokin.vercel.app</span>
+              <span>rongsokin.hallojanu.me</span>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { methodLabel } from "@/lib/orderStatus";
 import { useState, useEffect } from "react";
 import { useMe } from "@/hooks/useAuth";
 import { useUserCoords } from "@/hooks/useUserCoords";
@@ -15,7 +16,6 @@ import {
   getOrderTotalPrice,
   getOrderCategoryLabel,
 } from "@/lib/utils";
-import { useSocket } from "@/hooks/useSocket";
 import RadiusPicker, { RADIUS_MIN_KM, RADIUS_MAX_KM } from "@/components/features/discovery/RadiusPicker";
 import DesktopNav from "@/components/ui/DesktopNav";
 import BottomNav from "@/components/ui/BottomNav";
@@ -47,8 +47,9 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
+import type { Order } from "@/types";
 
-const mainIcon = (name: string): any => {
+const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
   if (name.includes("Plastik")) return RefreshCw;
   if (name.includes("Kertas") || name.includes("Kardus")) return Box;
   if (name.includes("Logam") || name.includes("Besi")) return Wrench;
@@ -60,6 +61,7 @@ const mainIcon = (name: string): any => {
 const STATUS_CONFIG: Record<string, { label: string; style: string }> = {
   PENDING: { label: "Menunggu Pengepul", style: "bg-[#fff4cc] text-[#4a3b1c]" },
   CONFIRMED: { label: "Pengepul Ditemukan", style: "bg-brand-100 text-brand-800" },
+  ON_THE_WAY: { label: "Dalam Perjalanan", style: "bg-[#dbeeff] text-[#0b4a6b]" },
   IN_PROGRESS: { label: "Sedang Diproses", style: "bg-[#dbeeff] text-[#0b4a6b]" },
   AWAITING_CONFIRMATION: { label: "Menunggu Konfirmasimu", style: "bg-[#ecdcff] text-[#3b1c5a]" },
   COMPLETED: { label: "Selesai", style: "bg-brand-100 text-brand-800" },
@@ -83,8 +85,6 @@ export default function CustomerDashboard() {
     }
   }, [token, user, router]);
 
-  useSocket();
-
   const { data: me, isLoading: isMeLoading } = useMe();
   const { data: orders, isLoading: isOrdersLoading } = useOrdersList({ limit: 50 });
   const { mains } = useCategoryTree();
@@ -93,26 +93,27 @@ export default function CustomerDashboard() {
   // Yogyakarta. Dulu di sini pakai GPS-langsung yang mengabaikan lokasi tersimpan —
   // akibatnya titik "Jangkauan Pencarian" tak ikut pindah walau profil diubah.
   const { coords, source: coordsSource } = useUserCoords();
-  const [greeting, setGreeting] = useState("Halo");
-
-  useEffect(() => {
+  // Halaman ini hanya dirender di klien (layout dashboard menunggu hydrasi auth),
+  // jadi aman membaca jam & localStorage lewat lazy initializer — tanpa setState
+  // di effect dan tanpa hydration mismatch.
+  const [greeting] = useState(() => {
     const hour = new Date().getHours();
-    if (hour < 11) setGreeting("Selamat pagi");
-    else if (hour < 15) setGreeting("Selamat siang");
-    else if (hour < 18) setGreeting("Selamat sore");
-    else setGreeting("Selamat malam");
-  }, []);
+    if (hour < 11) return "Selamat pagi";
+    if (hour < 15) return "Selamat siang";
+    if (hour < 18) return "Selamat sore";
+    return "Selamat malam";
+  });
 
   // Radius pencarian dipilih customer sendiri & diingat antar kunjungan.
-  const [radiusKm, setRadiusKm] = useState(5);
-  useEffect(() => {
+  const [radiusKm, setRadiusKm] = useState(() => {
     try {
       const saved = Number(localStorage.getItem("rongsokin:searchRadiusKm"));
-      if (saved >= RADIUS_MIN_KM && saved <= RADIUS_MAX_KM) setRadiusKm(saved);
+      if (saved >= RADIUS_MIN_KM && saved <= RADIUS_MAX_KM) return saved;
     } catch {
       /* localStorage diblokir → pakai default */
     }
-  }, []);
+    return 5;
+  });
   const handleRadiusChange = (km: number) => {
     setRadiusKm(km);
     try {
@@ -145,7 +146,7 @@ export default function CustomerDashboard() {
   );
   const totalEarnings = completedOrders.reduce((sum, o) => sum + getOrderTotalPrice(o), 0);
 
-  const getStatusLabel = (order: any) => {
+  const getStatusLabel = (order: Order) => {
     if (order.status === "PENDING") {
       return order.collectorId ? "Menunggu Persetujuan" : "Menunggu Pengepul";
     }
@@ -181,6 +182,7 @@ export default function CustomerDashboard() {
           <button
             onClick={handleLogout}
             className="w-9 h-9 rounded-2xl bg-surface flex items-center justify-center text-ink-muted hover:text-status-error transition-colors"
+            aria-label="Keluar"
           >
             <LogOut size={18} />
           </button>
@@ -249,7 +251,7 @@ export default function CustomerDashboard() {
                   {getOrderTotalEstWeight(activeOrder).toFixed(1)} kg
                 </p>
                 <p className="text-[10px] text-forest-muted">
-                  {formatDate(activeOrder.createdAt)} · {activeOrder.method}
+                  {formatDate(activeOrder.createdAt)} · {methodLabel(activeOrder.method)}
                 </p>
               </div>
               <ChevronRight size={18} className="text-brand-500 shrink-0" />
@@ -375,6 +377,7 @@ export default function CustomerDashboard() {
                 >
                   <div className="w-11 h-11 bg-surface rounded-2xl flex items-center justify-center shrink-0 text-ink overflow-hidden">
                     {collector.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- avatar Cloudinary eksternal
                       <img src={collector.avatarUrl} alt={collector.shopName} className="w-full h-full object-cover" />
                     ) : (
                       <Archive size={20} />
