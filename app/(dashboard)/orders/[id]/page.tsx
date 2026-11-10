@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import DesktopNav from "@/components/ui/DesktopNav";
@@ -45,18 +45,17 @@ import {
   formatDate,
   unitLabel,
   getOrderItems,
-  getOrderTotalEstWeight,
   getOrderTotalActualWeight,
   getOrderTotalPrice,
-  getOrderCategoryLabel,
 } from "@/lib/utils";
 import toast from "react-hot-toast";
-import { getApiErrorMessage } from "@/lib/apiError";
+import { getApiErrorMessage, getApiStatus } from "@/lib/apiError";
+import { confirmDialog } from "@/store/dialogStore";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import EcoImpactModal from "@/components/features/eco-impact/EcoImpactModal";
 import OrderRouteMap from "@/components/features/orders/OrderRouteMap";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
-import { useUserRatings } from "@/hooks/useRatings";
 import { useEcoLeaderboard } from "@/hooks/useEco";
 
 export default function OrderTrackingPage() {
@@ -70,8 +69,9 @@ export default function OrderTrackingPage() {
     initFromStorage();
   }, [initFromStorage]);
 
-  const { data: order, isLoading, refetch } = useOrderDetails(id);
+  const { data: order, isLoading, refetch, error, isFetching } = useOrderDetails(id);
   const updateOrderStatus = useUpdateOrderStatus(id);
+  const queryClient = useQueryClient();
   const { data: ecoData } = useEcoLeaderboard();
 
   // Live tracking (ShopeeFood-style): pihak yang BERGERAK memancarkan posisi GPS,
@@ -110,7 +110,19 @@ export default function OrderTrackingPage() {
   // selesai — yaitu statusnya BERUBAH jadi COMPLETED sewaktu halaman ini terbuka.
   // Membuka order yang statusnya SUDAH COMPLETED dari riwayat tidak memunculkan
   // apa pun (dulu dipicu dari status saja, jadi selalu nongol & mengganggu).
-  const prevStatusRef = useRef<string | null>(null);
+  // Pola "simpan nilai sebelumnya di state" (React docs) — tanpa setState di effect.
+  const [prevStatus, setPrevStatus] = useState<string | null>(null);
+  const currentStatus = order?.status ?? null;
+  if (currentStatus && currentStatus !== prevStatus) {
+    setPrevStatus(currentStatus);
+    // Render pertama (prevStatus null, termasuk order lama dari riwayat) → diam.
+    // Transisi → COMPLETED = order baru saja selesai.
+    if (prevStatus !== null && currentStatus === "COMPLETED") {
+      // Customer: Eco Impact dulu, rating menyusul saat modal eco ditutup.
+      if (user?.role === "CUSTOMER") setShowEcoImpact(true);
+      else setShowRating(true);
+    }
+  }
 
   useEffect(() => {
     if (!token || !id) return;
@@ -140,37 +152,44 @@ export default function OrderTrackingPage() {
     };
   }, [token, id, refetch]);
 
-  useEffect(() => {
-    const status = order?.status;
-    if (!status) return;
-    const prev = prevStatusRef.current;
-    prevStatusRef.current = status;
-
-    // Render pertama (termasuk saat membuka order lama dari riwayat) → jangan
-    // munculkan apa pun; kita belum tahu ini "baru selesai" atau memang sudah lama.
-    if (prev === null) return;
-    if (status !== "COMPLETED" || prev === "COMPLETED") return;
-
-    // Transisi → COMPLETED = order baru saja selesai.
-    // Customer: Eco Impact dulu, rating menyusul saat modal eco ditutup.
-    if (user?.role === "CUSTOMER") setShowEcoImpact(true);
-    else setShowRating(true);
-  }, [order?.status, user?.role]);
 
   if (isLoading) {
     return <OrderDetailSkeleton />;
   }
 
   if (!order) {
+    // Bedakan: bukan pihak transaksi (403), memang tidak ada, atau gagal jaringan.
+    const status = getApiStatus(error);
+    const forbidden = status === 403;
+    const transient = !!error && !forbidden && status !== 404;
+    const title = forbidden
+      ? "Kamu tidak punya akses ke pesanan ini"
+      : transient
+      ? "Gagal memuat pesanan"
+      : "Pesanan tidak ditemukan";
+    const desc = forbidden
+      ? "Pesanan ini milik pengguna lain. Hanya customer & pengepul pesanan yang bisa melihatnya."
+      : transient
+      ? getApiErrorMessage(error)
+      : "Pesanan mungkin sudah dihapus atau tautannya salah.";
+    const home = user?.role === "COLLECTOR" ? "/collector" : user?.role === "ADMIN" ? "/admin" : "/dashboard";
     return (
       <div className="min-h-screen bg-surface flex flex-col justify-between pb-20 md:pb-0">
         <DesktopNav />
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
-          <Info className="w-12 h-12 text-status-error" />
-          <h3 className="font-display font-extrabold text-lg text-ink">Pesanan Tidak Ditemukan</h3>
-          <Link href="/dashboard">
-            <Button>Kembali ke Beranda</Button>
-          </Link>
+        <div role="alert" className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <Info className="w-12 h-12 text-status-error" aria-hidden="true" />
+          <h1 className="font-display font-extrabold text-lg text-ink">{title}</h1>
+          <p className="text-sm text-ink-muted max-w-sm">{desc}</p>
+          <div className="flex gap-2 mt-2">
+            {transient && (
+              <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+                {isFetching ? "Memuat…" : "Coba lagi"}
+              </Button>
+            )}
+            <Link href={home}>
+              <Button>Kembali ke Beranda</Button>
+            </Link>
+          </div>
         </div>
         <BottomNav />
       </div>
@@ -363,8 +382,15 @@ export default function OrderTrackingPage() {
     );
   };
 
-  const handleCancelOrder = () => {
-    if (!window.confirm("Apakah Anda yakin ingin membatalkan pesanan ini?")) return;
+  const handleCancelOrder = async () => {
+    const ok = await confirmDialog({
+      title: "Batalkan pesanan?",
+      message: "Pesanan yang dibatalkan tidak bisa dilanjutkan lagi.",
+      confirmText: "Ya, batalkan",
+      cancelText: "Kembali",
+      tone: "danger",
+    });
+    if (!ok) return;
     updateOrderStatus.mutate(
       { action: "cancel" },
       {
@@ -392,6 +418,8 @@ export default function OrderTrackingPage() {
       toast.success("Ulasan Anda berhasil dikirim!");
       setRatingSubmitted(true);
       setShowRating(false);
+      queryClient.invalidateQueries({ queryKey: ["ratings"] });
+      refetch();
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, "Gagal mengirim ulasan."));
     } finally {

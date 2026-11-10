@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DesktopNav from "@/components/ui/DesktopNav";
@@ -24,7 +24,6 @@ import {
   Droplets,
   FileText,
   LogOut,
-  CreditCard,
   ArrowDownRight,
   Eye,
   ShieldAlert,
@@ -59,7 +58,7 @@ import { Order } from "@/types";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/apiError";
 
-const mainIcon = (name: string): any => {
+const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
   if (name.includes("Plastik")) return RefreshCw;
   if (name.includes("Kertas") || name.includes("Kardus")) return Box;
   if (name.includes("Logam") || name.includes("Besi")) return Wrench;
@@ -93,7 +92,6 @@ function IncomingOrderCard({
   const [timeLeft, setTimeLeft] = useState(computeLeft);
 
   useEffect(() => {
-    setTimeLeft(computeLeft());
     const timer = setInterval(() => setTimeLeft(computeLeft()), 1000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,15 +119,16 @@ function IncomingOrderCard({
 
   const handleReject = () => {
     updateOrderStatus.mutate(
-      { action: "reject" as any },
+      { action: "reject" },
       {
         onSuccess: () => {
           toast.success("Pesanan ditolak.");
           onRemove(order.id);
         },
-        onError: () => {
-          toast.success("Pesanan ditolak.");
-          onRemove(order.id);
+        // Dulu error pun ditampilkan "Pesanan ditolak." & kartu dihapus — padahal
+        // di server order masih tercatat untuk pengepul ini & muncul lagi saat polling.
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal menolak pesanan."));
         },
       }
     );
@@ -266,13 +265,11 @@ function IncomingOrderCard({
 // ── Request table row (own hook — fixes Rules of Hooks) ──────────────────
 function RequestRow({
   order,
-  index,
   onAccepted,
   onOpenDetail,
   canAccept = true,
 }: {
   order: Order;
-  index: number;
   onAccepted: (id: string) => void;
   onOpenDetail: (order: Order) => void;
   canAccept?: boolean;
@@ -280,11 +277,8 @@ function RequestRow({
   const router = useRouter();
   const [showPhoto, setShowPhoto] = useState(false);
   const updateOrderStatus = useUpdateOrderStatus(order.id);
-  // Jarak asli dari BE (km). Fallback estimasi berbasis urutan bila BE belum kirim.
-  const distance =
-    order.distanceKm != null
-      ? formatDistance(order.distanceKm * 1000)
-      : `~${((index + 1) * 0.8).toFixed(1)} km`;
+  // Jarak asli dari BE (km). Tanpa data → "—" (dulu angka karangan dari urutan baris).
+  const distance = order.distanceKm != null ? formatDistance(order.distanceKm * 1000) : "—";
 
   const handleAccept = () => {
     if (!canAccept) {
@@ -480,26 +474,24 @@ export default function CollectorDashboard() {
   const updateCatalogs = useUpdateCatalogs();
 
   const [isCatalogExpanded, setIsCatalogExpanded] = useState(false);
-  const [editedCatalogs, setEditedCatalogs] = useState<
-    Record<string, { minPrice: number; maxPrice: number; isActive: boolean }>
-  >({});
-
-  // Init harga per kategori
-  useEffect(() => {
-    if (mains.length > 0) {
-      const initial: typeof editedCatalogs = {};
-      mains.forEach((cat) => {
-        const existing = profile?.catalogs?.find((c) => c.categoryId === cat.id);
-        initial[cat.id] = {
-          minPrice: existing?.minPrice ?? 1000,
-          maxPrice: existing?.maxPrice ?? 2000,
-          isActive: existing?.isActive ?? false,
-        };
-      });
-      setEditedCatalogs(initial);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, mains.length]);
+  type CatalogDraft = { minPrice: number; maxPrice: number; isActive: boolean };
+  // Hanya EDITAN user yang disimpan di state; nilai dasar diturunkan dari profil.
+  // Dulu seluruh draf di-reset tiap profil di-refetch (mis. setelah buka/tutup
+  // lapak) sehingga harga yang belum disimpan hilang — plus setState di effect.
+  const [catalogEdits, setCatalogEdits] = useState<Record<string, Partial<CatalogDraft>>>({});
+  const editedCatalogs = useMemo(() => {
+    const merged: Record<string, CatalogDraft> = {};
+    mains.forEach((cat) => {
+      const existing = profile?.catalogs?.find((c) => c.categoryId === cat.id);
+      merged[cat.id] = {
+        minPrice: existing?.minPrice ?? 1000,
+        maxPrice: existing?.maxPrice ?? 2000,
+        isActive: existing?.isActive ?? false,
+        ...catalogEdits[cat.id],
+      };
+    });
+    return merged;
+  }, [mains, profile, catalogEdits]);
 
   const today = new Date().toDateString();
   const completedToday =
@@ -539,17 +531,22 @@ export default function CollectorDashboard() {
   };
 
   const handleValChange = (catId: string, field: "minPrice" | "maxPrice", val: number) => {
-    setEditedCatalogs((prev) => ({ ...prev, [catId]: { ...prev[catId], [field]: val } }));
+    setCatalogEdits((prev) => ({ ...prev, [catId]: { ...prev[catId], [field]: val } }));
   };
 
   const handleToggleCatalogActive = (catId: string) => {
-    setEditedCatalogs((prev) => ({
-      ...prev,
-      [catId]: { ...prev[catId], isActive: !prev[catId]?.isActive },
-    }));
+    const next = !editedCatalogs[catId]?.isActive;
+    setCatalogEdits((prev) => ({ ...prev, [catId]: { ...prev[catId], isActive: next } }));
   };
 
   const handleSaveCatalogs = () => {
+    const invalid = Object.values(editedCatalogs).find(
+      (c) => c.isActive && (!(c.minPrice > 0) || !(c.maxPrice > 0) || c.minPrice > c.maxPrice)
+    );
+    if (invalid) {
+      toast.error("Harga minimum harus > 0 dan tidak boleh melebihi harga maksimum.");
+      return;
+    }
     const payload = Object.entries(editedCatalogs).map(([categoryId, data]) => ({
       categoryId,
       minPrice: Number(data.minPrice),
@@ -695,11 +692,10 @@ export default function CollectorDashboard() {
                 </thead>
                 <tbody className="divide-y divide-ink-faint">
                   {warOrders.length > 0 ? (
-                    warOrders.map((order, idx) => (
+                    warOrders.map((order) => (
                       <RequestRow
                         key={order.id}
                         order={order}
-                        index={idx}
                         onAccepted={removeIncomingOrder}
                         onOpenDetail={(o) => setDetailOrderId(o.id)}
                         canAccept={!needsVerify}

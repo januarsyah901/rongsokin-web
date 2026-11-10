@@ -23,13 +23,13 @@ import {
   formatRupiah,
   formatDate,
   getOrderTotalEstWeight,
-  getOrderTotalActualWeight,
   getOrderTotalPrice,
   getOrderCategoryLabel,
   getOrderItems,
 } from "@/lib/utils";
+import { ACTIVE_ORDER_STATUSES, getOrderStatusLabel } from "@/lib/orderStatus";
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   Kardus: Archive,
   Plastik: RefreshCw,
   Logam: Wrench,
@@ -57,32 +57,10 @@ export default function OrdersPage() {
     orders?.filter((order) => {
       if (filter === "Berhasil") return order.status === "COMPLETED";
       if (filter === "Dalam Proses")
-        return ["PENDING", "CONFIRMED", "IN_PROGRESS", "AWAITING_CONFIRMATION"].includes(
-          order.status
-        );
+        return ACTIVE_ORDER_STATUSES.includes(order.status);
       if (filter === "Dibatalkan") return order.status === "CANCELLED";
       return true;
     }) || [];
-
-  const getStatusLabel = (order: any) => {
-    const status = order.status;
-    switch (status) {
-      case "PENDING":
-        return order.collectorId ? "Menunggu Persetujuan" : "Mencari Pengepul";
-      case "CONFIRMED":
-        return "Diterima";
-      case "IN_PROGRESS":
-        return "Penjemputan";
-      case "AWAITING_CONFIRMATION":
-        return "Perlu Konfirmasi";
-      case "COMPLETED":
-        return "Berhasil";
-      case "CANCELLED":
-        return "Batal";
-      default:
-        return status;
-    }
-  };
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -90,6 +68,11 @@ export default function OrdersPage() {
         return "bg-brand-100 text-brand-800";
       case "CANCELLED":
         return "bg-status-error/10 text-status-error";
+      case "AWAITING_CONFIRMATION":
+        return "bg-[#ecdcff] text-[#3b1c5a]";
+      case "ON_THE_WAY":
+      case "IN_PROGRESS":
+        return "bg-[#dbeeff] text-[#0b4a6b]";
       default:
         return "bg-[#fff4cc] text-[#4a3b1c]";
     }
@@ -185,7 +168,7 @@ export default function OrdersPage() {
                       order.status
                     )}`}
                   >
-                    {getStatusIcon(order.status)} {getStatusLabel(order)}
+                    {getStatusIcon(order.status)} {getOrderStatusLabel(order)}
                   </span>
                 </div>
 

@@ -21,12 +21,16 @@ export default function ConfirmDialog() {
   const handleConfirm = useDialogStore((s) => s.handleConfirm);
   const handleCancel = useDialogStore((s) => s.handleCancel);
 
-  // Esc = batal (confirm) / tutup (alert); Enter = konfirmasi
+  // Esc = batal (confirm) / tutup (alert). Enter TIDAK ditangkap global: dulu
+  // Enter selalu = konfirmasi, termasuk saat fokus di tombol "Batal" — aksi
+  // berbahaya (batalkan pesanan) bisa terkonfirmasi tak sengaja. Enter kini
+  // cukup mengaktifkan tombol yang sedang fokus (perilaku bawaan).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") variant === "confirm" ? handleCancel() : handleConfirm();
-      else if (e.key === "Enter") handleConfirm();
+      if (e.key !== "Escape") return;
+      if (variant === "confirm") handleCancel();
+      else handleConfirm();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -47,6 +51,8 @@ export default function ConfirmDialog() {
         className="w-full max-w-sm bg-surface-raised rounded-2xl p-6 shadow-2xl space-y-5"
         role="alertdialog"
         aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby={message ? "confirm-dialog-message" : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
@@ -58,9 +64,14 @@ export default function ConfirmDialog() {
             {danger ? <AlertTriangle size={20} /> : <HelpCircle size={20} />}
           </div>
           <div className="min-w-0">
-            <h3 className="font-display font-extrabold text-base text-ink">{title}</h3>
+            <h3 id="confirm-dialog-title" className="font-display font-extrabold text-base text-ink">
+              {title}
+            </h3>
             {message && (
-              <p className="text-xs text-ink-muted leading-relaxed mt-1 whitespace-pre-line">
+              <p
+                id="confirm-dialog-message"
+                className="text-xs text-ink-muted leading-relaxed mt-1 whitespace-pre-line"
+              >
                 {message}
               </p>
             )}
@@ -69,7 +80,8 @@ export default function ConfirmDialog() {
 
         <div className="flex gap-2">
           {variant === "confirm" && cancelText && (
-            <Button variant="ghost" onClick={handleCancel} className="flex-1">
+            // Aksi berbahaya: fokus awal di "Batal", bukan di tombol konfirmasi.
+            <Button variant="ghost" onClick={handleCancel} className="flex-1" autoFocus={danger}>
               {cancelText}
             </Button>
           )}
@@ -77,7 +89,7 @@ export default function ConfirmDialog() {
             variant={danger ? "danger" : "primary"}
             onClick={handleConfirm}
             className="flex-1"
-            autoFocus
+            autoFocus={!danger || variant !== "confirm"}
           >
             {confirmText}
           </Button>

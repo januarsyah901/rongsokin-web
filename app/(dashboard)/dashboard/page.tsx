@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
+import type { Order } from "@/types";
 
 const mainIcon = (name: string): any => {
   if (name.includes("Plastik")) return RefreshCw;
@@ -59,6 +60,7 @@ const mainIcon = (name: string): any => {
 const STATUS_CONFIG: Record<string, { label: string; style: string }> = {
   PENDING: { label: "Menunggu Pengepul", style: "bg-[#fff4cc] text-[#4a3b1c]" },
   CONFIRMED: { label: "Pengepul Ditemukan", style: "bg-brand-100 text-brand-800" },
+  ON_THE_WAY: { label: "Dalam Perjalanan", style: "bg-[#dbeeff] text-[#0b4a6b]" },
   IN_PROGRESS: { label: "Sedang Diproses", style: "bg-[#dbeeff] text-[#0b4a6b]" },
   AWAITING_CONFIRMATION: { label: "Menunggu Konfirmasimu", style: "bg-[#ecdcff] text-[#3b1c5a]" },
   COMPLETED: { label: "Selesai", style: "bg-brand-100 text-brand-800" },
@@ -90,26 +92,27 @@ export default function CustomerDashboard() {
   // Yogyakarta. Dulu di sini pakai GPS-langsung yang mengabaikan lokasi tersimpan —
   // akibatnya titik "Jangkauan Pencarian" tak ikut pindah walau profil diubah.
   const { coords, source: coordsSource } = useUserCoords();
-  const [greeting, setGreeting] = useState("Halo");
-
-  useEffect(() => {
+  // Halaman ini hanya dirender di klien (layout dashboard menunggu hydrasi auth),
+  // jadi aman membaca jam & localStorage lewat lazy initializer — tanpa setState
+  // di effect dan tanpa hydration mismatch.
+  const [greeting] = useState(() => {
     const hour = new Date().getHours();
-    if (hour < 11) setGreeting("Selamat pagi");
-    else if (hour < 15) setGreeting("Selamat siang");
-    else if (hour < 18) setGreeting("Selamat sore");
-    else setGreeting("Selamat malam");
-  }, []);
+    if (hour < 11) return "Selamat pagi";
+    if (hour < 15) return "Selamat siang";
+    if (hour < 18) return "Selamat sore";
+    return "Selamat malam";
+  });
 
   // Radius pencarian dipilih customer sendiri & diingat antar kunjungan.
-  const [radiusKm, setRadiusKm] = useState(5);
-  useEffect(() => {
+  const [radiusKm, setRadiusKm] = useState(() => {
     try {
       const saved = Number(localStorage.getItem("rongsokin:searchRadiusKm"));
-      if (saved >= RADIUS_MIN_KM && saved <= RADIUS_MAX_KM) setRadiusKm(saved);
+      if (saved >= RADIUS_MIN_KM && saved <= RADIUS_MAX_KM) return saved;
     } catch {
       /* localStorage diblokir → pakai default */
     }
-  }, []);
+    return 5;
+  });
   const handleRadiusChange = (km: number) => {
     setRadiusKm(km);
     try {
@@ -142,7 +145,7 @@ export default function CustomerDashboard() {
   );
   const totalEarnings = completedOrders.reduce((sum, o) => sum + getOrderTotalPrice(o), 0);
 
-  const getStatusLabel = (order: any) => {
+  const getStatusLabel = (order: Order) => {
     if (order.status === "PENDING") {
       return order.collectorId ? "Menunggu Persetujuan" : "Menunggu Pengepul";
     }
