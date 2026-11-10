@@ -17,6 +17,7 @@ import { useUserRatings } from "@/hooks/useRatings";
 import { getOrderItems, getOrderTotalEstWeight, formatDistance, formatDate } from "@/lib/utils";
 import { Order } from "@/types";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 /** Bintang read-only untuk skor 0..5 */
 function Stars({ score, size = 12 }: { score: number; size?: number }) {
@@ -72,8 +73,7 @@ export default function CustomerReviewModal({ order, canAccept = true, onClose, 
           router.push(`/orders/${order.id}`);
         },
         onError: (err: unknown) => {
-          const e = err as { response?: { data?: { message?: string } } };
-          toast.error(e?.response?.data?.message || "Gagal menerima pesanan.");
+          toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
         },
       }
     );

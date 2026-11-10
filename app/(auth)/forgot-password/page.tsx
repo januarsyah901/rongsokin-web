@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/ui/Logo";
 import { useForgotPassword } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -26,8 +27,8 @@ export default function ForgotPasswordPage() {
         setIsSubmitted(true);
         toast.success("Tautan atur ulang kata sandi berhasil dikirim!");
       },
-      onError: (err: any) => {
-        const errMsg = err.response?.data?.message || "Gagal mengirim tautan pemulihan.";
+      onError: (err: unknown) => {
+        const errMsg = getApiErrorMessage(err, "Gagal mengirim tautan pemulihan.");
         toast.error(errMsg);
       },
     });

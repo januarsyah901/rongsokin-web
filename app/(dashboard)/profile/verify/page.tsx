@@ -25,6 +25,7 @@ import { useMe, useUpdateMe } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
 import { scanKtp } from "@/lib/ktpOcr";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 type OcrStatus = "idle" | "scanning" | "done" | "failed";
 
@@ -101,9 +102,7 @@ export default function VerifyKtpPage() {
           router.push("/profile");
         },
         onError: (err: unknown) => {
-          const msg =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            "Verifikasi gagal. Coba lagi.";
+          const msg = getApiErrorMessage(err, "Verifikasi gagal. Coba lagi.");
           toast.error(msg);
         },
       }

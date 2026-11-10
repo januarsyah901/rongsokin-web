@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/ui/Logo";
 import { useLogin } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,8 +32,8 @@ export default function LoginPage() {
             role === "ADMIN" ? "/admin" : role === "COLLECTOR" ? "/collector" : "/dashboard";
           router.push(target);
         },
-        onError: (err: any) => {
-          const errMsg = err.response?.data?.message || "Login gagal. Silakan coba lagi.";
+        onError: (err: unknown) => {
+          const errMsg = getApiErrorMessage(err, "Login gagal. Silakan coba lagi.");
           setError(errMsg);
           toast.error(errMsg);
         },

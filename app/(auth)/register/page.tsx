@@ -26,6 +26,7 @@ import { useRegister } from "@/hooks/useAuth";
 import { useUpdateCollectorProfile } from "@/hooks/useCollector";
 import { scanKtp } from "@/lib/ktpOcr";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 type OcrStatus = "idle" | "scanning" | "done" | "failed";
 
@@ -177,9 +178,7 @@ function RegisterForm() {
           }
         },
         onError: (err: unknown) => {
-          const msg =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            "Registrasi gagal. Coba lagi.";
+          const msg = getApiErrorMessage(err, "Registrasi gagal. Coba lagi.");
           toast.error(msg);
         },
       }
@@ -202,9 +201,7 @@ function RegisterForm() {
           router.push("/collector");
         },
         onError: (err: unknown) => {
-          const msg =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            "Gagal mengatur profil lapak.";
+          const msg = getApiErrorMessage(err, "Gagal mengatur profil lapak.");
           toast.error(msg);
         },
       }

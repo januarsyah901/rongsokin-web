@@ -58,6 +58,7 @@ import {
 import { Star, MapPin } from "lucide-react";
 import { Order } from "@/types";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 const mainIcon = (name: string): any => {
   if (name.includes("Plastik")) return RefreshCw;
@@ -112,8 +113,8 @@ function IncomingOrderCard({
           onRemove(order.id);
           router.push(`/orders/${order.id}`);
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal menerima pesanan.");
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
         },
       }
     );
@@ -299,8 +300,8 @@ function RequestRow({
           onAccepted(order.id);
           router.push(`/orders/${order.id}`);
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal menerima pesanan.");
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal menerima pesanan."));
         },
       }
     );
@@ -561,8 +562,8 @@ export default function CollectorDashboard() {
 
     updateCatalogs.mutate(payload, {
       onSuccess: () => toast.success("Katalog harga berhasil diperbarui!"),
-      onError: (err: any) =>
-        toast.error(err.response?.data?.message || "Gagal memperbarui katalog."),
+      onError: (err: unknown) =>
+        toast.error(getApiErrorMessage(err, "Gagal memperbarui katalog.")),
     });
   };
 

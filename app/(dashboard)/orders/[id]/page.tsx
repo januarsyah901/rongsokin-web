@@ -51,6 +51,7 @@ import {
   getOrderCategoryLabel,
 } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 import api from "@/lib/axios";
 import EcoImpactModal from "@/components/features/eco-impact/EcoImpactModal";
 import OrderRouteMap from "@/components/features/orders/OrderRouteMap";
@@ -294,8 +295,8 @@ export default function OrderTrackingPage() {
           toast.success("Ditandai sudah sampai. Lanjut ke timbang.");
           refetch();
         },
-        onError: (err: any) =>
-          toast.error(err.response?.data?.message || "Gagal menandai sampai."),
+        onError: (err: unknown) =>
+          toast.error(getApiErrorMessage(err, "Gagal menandai sampai.")),
       }
     );
   };
@@ -326,8 +327,8 @@ export default function OrderTrackingPage() {
           toast.success("Validasi timbangan dikirim! Menunggu konfirmasi customer…");
           refetch();
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal mengirim validasi.");
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal mengirim validasi."));
         },
       }
     );
@@ -352,8 +353,8 @@ export default function OrderTrackingPage() {
           toast.success("Transaksi disetujui! Pembayaran diproses.");
           refetch();
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal menyetujui transaksi.");
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal menyetujui transaksi."));
         },
       }
     );
@@ -368,8 +369,8 @@ export default function OrderTrackingPage() {
           toast.success("Pesanan berhasil dibatalkan.");
           refetch();
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || "Gagal membatalkan pesanan.");
+        onError: (err: unknown) => {
+          toast.error(getApiErrorMessage(err, "Gagal membatalkan pesanan."));
         },
       }
     );
@@ -388,8 +389,8 @@ export default function OrderTrackingPage() {
       toast.success("Ulasan Anda berhasil dikirim!");
       setRatingSubmitted(true);
       setShowRating(false);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Gagal mengirim ulasan.");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Gagal mengirim ulasan."));
     } finally {
       setRatingLoading(false);
     }

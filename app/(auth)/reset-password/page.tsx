@@ -10,6 +10,7 @@ import { Logo } from "@/components/ui/Logo";
 import { useResetPassword } from "@/hooks/useAuth";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export default function ResetPasswordPage() {
   return (
@@ -58,9 +59,8 @@ function ResetPasswordInner() {
             router.push("/login");
           }, 3000);
         },
-        onError: (err: any) => {
-          const errMsg =
-            err.response?.data?.message || "Gagal mengatur ulang kata sandi. Tautan mungkin kedaluwarsa.";
+        onError: (err: unknown) => {
+          const errMsg = getApiErrorMessage(err, "Gagal mengatur ulang kata sandi. Tautan mungkin kedaluwarsa.");
           toast.error(errMsg);
         },
       }

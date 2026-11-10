@@ -39,6 +39,7 @@ import {
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { Order, OrderStatus, WasteCategory } from "@/types";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 const ORDER_STATUS_FILTERS: { label: string; value: string }[] = [
   { label: "Semua", value: "" },
@@ -282,8 +283,7 @@ function CategoryManager() {
           setNewUnit("kg");
         },
         onError: (err: unknown) => {
-          const e = err as { response?: { data?: { message?: string } } };
-          toast.error(e?.response?.data?.message || "Gagal menambah kategori.");
+          toast.error(getApiErrorMessage(err, "Gagal menambah kategori."));
         },
       }
     );
@@ -310,8 +310,7 @@ function CategoryManager() {
           setEditingId(null);
         },
         onError: (err: unknown) => {
-          const e = err as { response?: { data?: { message?: string } } };
-          toast.error(e?.response?.data?.message || "Gagal mengubah kategori.");
+          toast.error(getApiErrorMessage(err, "Gagal mengubah kategori."));
         },
       }
     );
@@ -324,8 +323,7 @@ function CategoryManager() {
         setConfirmDelete(null);
       },
       onError: (err: unknown) => {
-        const e = err as { response?: { data?: { message?: string } } };
-        toast.error(e?.response?.data?.message || "Gagal menghapus kategori.");
+        toast.error(getApiErrorMessage(err, "Gagal menghapus kategori."));
       },
     });
   };
