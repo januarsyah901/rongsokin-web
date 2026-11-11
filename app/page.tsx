@@ -120,7 +120,7 @@ export default function LandingPage() {
   const featuredCollectors = collectors?.slice(0, 6) || [];
 
   return (
-    <div className="pb-20 md:pb-0 bg-surface min-h-screen">
+    <div className={`${token ? "pb-24" : "pb-0"} md:pb-0 bg-surface min-h-screen`}>
       <DesktopNav />
 
       {/* MOBILE HEADER */}
@@ -147,17 +147,17 @@ export default function LandingPage() {
       </header>
 
       {/* HERO — sage band, white converter card */}
-      <section className="px-4 py-6 md:px-8 md:py-12 max-w-6xl mx-auto">
+      <section className="px-4 pt-5 pb-6 md:px-8 md:py-12 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row items-center gap-8 md:gap-10">
           {/* LEFT — headline */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 space-y-5 md:space-y-6">
             <div className="inline-flex items-center gap-2 bg-brand-100 rounded-full px-3 py-1.5">
               <span className="w-2 h-2 rounded-full bg-brand-500 dot-live" />
               <span className="text-xs font-bold text-brand-800">
                 Marketplace Daur Ulang Yogyakarta
               </span>
             </div>
-            <h1 className="font-display text-4xl md:text-6xl font-extrabold text-ink leading-[1.05] tracking-tight">
+            <h1 className="font-display text-[2.1rem] sm:text-5xl md:text-6xl font-extrabold text-ink leading-[1.2] md:leading-[1.1] tracking-tight">
               Jual rongsokmu,
               <br />
               <span className="bg-brand-500 px-2 rounded-lg box-decoration-clone">
@@ -206,7 +206,7 @@ export default function LandingPage() {
 
           {/* RIGHT — estimator interaktif */}
           <div className="w-full md:w-96 shrink-0">
-            <div className="bg-surface-raised border border-ink rounded-2xl p-6 space-y-4">
+            <div className="bg-surface-raised border border-ink rounded-2xl p-4 sm:p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-mute font-mono">
                   Estimasi Cuan

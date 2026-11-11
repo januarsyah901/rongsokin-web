@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home,
   Plus,
   Clock,
   User,
@@ -30,6 +29,9 @@ export default function BottomNav() {
   const isCollector = role === "COLLECTOR";
   const isAdmin = role === "ADMIN";
 
+  // Belum login: tidak ada navbar bawah (header + tombol di halaman sudah cukup).
+  if (!token) return null;
+
   let navItems: NavItem[];
 
   if (isAdmin) {
@@ -45,15 +47,12 @@ export default function BottomNav() {
       { href: "/profile", label: "Profil", icon: User },
     ];
   } else {
-    // Customer / belum login — Beranda hanya saat belum login
-    const homeItem: NavItem = token
-      ? { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }
-      : { href: "/", label: "Beranda", icon: Home };
+    const homeItem: NavItem = { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard };
 
     navItems = [
       homeItem,
       { href: "/orders", label: "Riwayat", icon: Clock },
-      { href: token ? "/orders/new" : "/login", label: "Jual", icon: Plus, isCenter: true },
+      { href: "/orders/new", label: "Jual", icon: Plus, isCenter: true },
       // Item ini konsisten dgn DesktopNav customer yang sudah punya Eco.
       { href: "/eco", label: "Eco", icon: Leaf },
       { href: "/profile", label: "Profil", icon: User },
