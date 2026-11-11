@@ -1,9 +1,9 @@
 import DesktopNav from "@/components/ui/DesktopNav";
 import BottomNav from "@/components/ui/BottomNav";
 
-/** Blok pulse dasar. Pakai untuk semua placeholder. */
+/** Blok placeholder dasar dengan kilau (shimmer). Pakai untuk semua placeholder. */
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse bg-ink/[0.06] rounded-lg ${className}`} />;
+  return <div aria-hidden="true" className={`shimmer bg-ink/[0.06] rounded-lg ${className}`} />;
 }
 
 /** Kartu putih statis yang isinya placeholder. */

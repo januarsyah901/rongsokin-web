@@ -133,6 +133,81 @@ body {
   animation: dotPulse 2s infinite;
 }
 
+/* ── Skeleton shimmer ──────────────────────────────────────────────────── */
+/* Kilau menyapu di atas blok placeholder apa pun (warna dasar tetap milik blok).
+   `.shimmer` = kilau terang (untuk blok abu/sage); tambah `.shimmer-ink` untuk
+   blok putih supaya kilaunya tetap terlihat. */
+@keyframes shimmerSweep {
+  100% { transform: translateX(100%); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: shimmerSweep 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.shimmer-ink::after {
+  background: linear-gradient(90deg, transparent, rgba(14, 15, 12, 0.05), transparent);
+}
+
+/* ── Modal enter (backdrop fade + panel pop) ───────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+.anim-backdrop {
+  animation: fadeIn 180ms ease-out both;
+}
+.anim-pop {
+  animation: popIn 240ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+/* ── Perhatian sekali-dua kali untuk tawaran order baru ───────────────── */
+@keyframes offerAttention {
+  0% { box-shadow: 0 0 0 0 rgba(159, 232, 112, 0.75); }
+  100% { box-shadow: 0 0 0 10px rgba(159, 232, 112, 0); }
+}
+.offer-attention {
+  animation: offerAttention 1s ease-out 2;
+}
+
+/* Detik-detik terakhir countdown tawaran (< 1 menit). */
+@keyframes urgentTick {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.urgent-tick {
+  animation: urgentTick 1s ease-in-out infinite;
+}
+
+/* ── Transisi halaman ringan (hanya opacity — tidak mengubah containing
+   block elemen fixed/sticky) ─────────────────────────────────────────── */
+.page-fade {
+  animation: fadeIn 200ms ease-out both;
+}
+
+/* ── Radar "mencari pengepul" ─────────────────────────────────────────── */
+@keyframes radarPing {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+.radar-ring {
+  animation: radarPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.radar-ring-delay {
+  animation-delay: 0.9s;
+}
+
 /* ── Receipt wavy bottom edge (digital nota) ───────────────────────────── */
 /* Dua lapis mask:
    (1) linear-gradient menutup SELURUH badan struk  → isi struk tetap terlihat.
@@ -171,5 +246,21 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Animasi dekoratif/berulang dimatikan total (bukan sekadar dipercepat). */
+  .shimmer::after,
+  .radar-ring,
+  .urgent-tick,
+  .offer-attention,
+  .dot-live {
+    animation: none !important;
+  }
+  .shimmer::after,
+  .radar-ring {
+    display: none;
+  }
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
   }
 }
