@@ -9,10 +9,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # NEXT_PUBLIC_* ditanam saat build (dipakai di browser).
+# Endpoint WebSocket realtime diturunkan dari API URL (…/api/v1/ws).
 ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
-    NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 

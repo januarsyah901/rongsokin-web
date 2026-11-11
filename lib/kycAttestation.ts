@@ -2,7 +2,7 @@
 import crypto from "crypto";
 
 // Tanda tangan hasil OCR KTP untuk backend. Format HARUS identik dengan
-// rongsokin-api/be-rongsok/src/utils/kyc.js:
+// rongsokin-api/internal/security/kyc.go:
 //   base64url(JSON{ nik, nama, exp }) + "." + base64url(HMAC-SHA256(body))
 // Secret bersama: KYC_ATTESTATION_SECRET (diset di Vercel DAN di BE).
 

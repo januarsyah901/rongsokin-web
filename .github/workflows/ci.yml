@@ -31,7 +31,6 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://rongsokin.hallojanu.me/api/v1
-          NEXT_PUBLIC_SOCKET_URL: https://rongsokin.hallojanu.me
       - name: Docker image builds
         run: docker build -q -t rongsokin-web:ci .
 

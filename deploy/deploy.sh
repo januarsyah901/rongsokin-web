@@ -15,7 +15,7 @@ CADDYFILE=/opt/stacks/reverse-proxy/Caddyfile
 SITE_URL="${SITE_URL:-https://rongsokin.hallojanu.me}"
 HOST="${SITE_URL#*://}"
 API_SRC="${API_SRC:-$WEB_SRC/../rongsokin-api}"
-[ -f "$API_SRC/be-rongsok/Dockerfile" ] || { echo "Repo API tidak ditemukan. Set API_SRC=/path/ke/rongsokin-api" >&2; exit 1; }
+[ -f "$API_SRC/Dockerfile" ] && [ -f "$API_SRC/go.mod" ] || { echo "Repo API tidak ditemukan. Set API_SRC=/path/ke/rongsokin-api" >&2; exit 1; }
 API_SRC="$(cd "$API_SRC" && pwd)"
 
 mkdir -p "$STACK/data/postgres" "$STACK/backup"
@@ -65,16 +65,15 @@ if [ "${SKIP_BACKUP:-}" != true ] && docker ps --format '{{.Names}}' | grep -qx 
 fi
 
 echo "› Build image API ($API_SRC)"
-docker build -q -f "$API_SRC/be-rongsok/Dockerfile" -t ghcr.io/mrfroglab/be-rongsok.in:latest "$API_SRC" >/dev/null
+docker build -q -f "$API_SRC/Dockerfile" -t ghcr.io/mrfroglab/be-rongsok.in:latest "$API_SRC" >/dev/null
 echo "› Build image web ($WEB_SRC)"
 docker build -q \
   --build-arg "NEXT_PUBLIC_API_URL=$SITE_URL/api/v1" \
-  --build-arg "NEXT_PUBLIC_SOCKET_URL=$SITE_URL" \
   -t rongsokin-web:latest "$WEB_SRC" >/dev/null
 
 cp "$WEB_SRC/deploy/docker-compose.yml" "$STACK/docker-compose.yml"
 
-# --- Rute Caddy: satu domain; /api/v1, /socket.io, /api-docs, /health → API, sisanya → web.
+# --- Rute Caddy: satu domain; /api/v1 (termasuk WebSocket /api/v1/ws), /api-docs, /health → API, sisanya → web.
 #     (/api/ktp-ocr milik Next, jadi API dicocokkan lewat /api/v1, bukan /api/*.)
 cp "$CADDYFILE" "$CADDYFILE.bak"
 SITE_HOST="$HOST" python3 - "$CADDYFILE" <<'PY'
@@ -83,7 +82,7 @@ path, host = sys.argv[1], os.environ["SITE_HOST"]
 block = f"""# BEGIN rongsokin (dikelola rongsokin-web/deploy/deploy.sh)
 http://{host} {{
 	encode zstd gzip
-	@api path /api/v1/* /socket.io/* /api-docs* /health
+	@api path /api/v1/* /api-docs* /health
 	handle @api {{
 		reverse_proxy rongsokin-api:3000 {{
 			header_up X-Forwarded-For {{http.request.header.CF-Connecting-IP}}

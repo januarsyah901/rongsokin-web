@@ -7,7 +7,7 @@ Marketplace daur ulang sampah berbasis geolokasi yang menghubungkan **penjual sa
 ## Fitur Utama
 
 - **War & Forward order** — customer bisa broadcast pesanan ke semua pengepul terdekat (War/FCFS) atau langsung mengirim ke satu pengepul pilihan dari lapaknya (Forward/private).
-- **Real-time** via Socket.IO — status pesanan, antrean masuk, dan live tracking lokasi saat penjemputan/pengantaran.
+- **Real-time** via WebSocket — status pesanan, antrean masuk, dan live tracking lokasi saat penjemputan/pengantaran.
 - **Peta rute** (Leaflet) antara pengepul dan customer, lengkap dengan navigasi ke Google Maps.
 - **KYC ringan** — verifikasi NIK dari foto KTP via OCR (Gemini Vision, fallback Tesseract.js), tanpa menyimpan foto KTP demi privasi.
 - **Eco Impact & Leaderboard** — dampak lingkungan (estimasi km emisi motor tercegah) dari sampah yang berhasil didaur ulang, kartu share yang bisa diunduh, serta papan peringkat.
@@ -21,7 +21,7 @@ Marketplace daur ulang sampah berbasis geolokasi yang menghubungkan **penjual sa
 - [Tailwind CSS 4](https://tailwindcss.com/)
 - [Zustand](https://github.com/pmndrs/zustand) — state management
 - [TanStack Query](https://tanstack.com/query) — data fetching & caching
-- [Socket.IO Client](https://socket.io/) — realtime
+- WebSocket native (`lib/socket.ts`) — realtime ke backend Go (`/api/v1/ws`)
 - [React Leaflet](https://react-leaflet.js.org/) — peta
 - [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) — form & validasi
 - [Tesseract.js](https://github.com/naptha/tesseract.js) — OCR fallback
@@ -38,8 +38,8 @@ npm run dev
 Frontend butuh backend [be-rongsok.in](https://github.com/januarsyah901/be-rongsok.in) yang berjalan lokal. Jalankan BE di port 4000 (port 3000 dipakai Next.js), lalu copy `.env.example` menjadi `.env.local`:
 
 ```bash
-# di repo backend
-PORT=4000 npm run dev
+# di repo backend (Go)
+PORT=4000 go run ./cmd/api
 
 # di repo ini
 cp .env.example .env.local
@@ -50,7 +50,6 @@ Isi `.env.example`:
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
-NEXT_PUBLIC_SOCKET_URL=http://localhost:4000
 
 # OCR KTP (opsional — tanpa ini otomatis fallback ke Tesseract.js)
 GEMINI_API_KEY=
