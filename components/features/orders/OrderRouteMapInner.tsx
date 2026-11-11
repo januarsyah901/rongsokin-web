@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import { MAP_TILE_URL, MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM } from "@/lib/mapTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import AnimatedMarker from "./AnimatedMarker";
 
 interface LatLng {
   lat: number;
@@ -60,6 +61,8 @@ function FitBounds({ pts }: { pts: LatLng[] }) {
 export default function OrderRouteMapInner({ customer, collector, live, height = 240 }: Props) {
   const center = customer ?? collector;
   const fitPts = [collector, ...(customer ? [customer] : []), ...(live ? [live] : [])];
+  // Ikon dibuat sekali (dulu dibuat ulang tiap render → setIcon tiap update GPS).
+  const liveMarkerIcon = useMemo(() => liveIcon(), []);
   return (
     <div
       className="relative isolate rounded-2xl overflow-hidden border border-ink-faint"
@@ -90,7 +93,8 @@ export default function OrderRouteMapInner({ customer, collector, live, height =
           <Marker position={[customer.lat, customer.lng]} icon={makeIcon("#9fe870", "C")} />
         )}
         <Marker position={[collector.lat, collector.lng]} icon={makeIcon("#ffffff", "P")} />
-        {live && <Marker position={[live.lat, live.lng]} icon={liveIcon()} />}
+        {/* Posisi live meluncur halus antar-update GPS (bukan melompat) */}
+        {live && <AnimatedMarker position={live} icon={liveMarkerIcon} />}
         {fitPts.length > 1 && <FitBounds pts={fitPts} />}
       </MapContainer>
     </div>
