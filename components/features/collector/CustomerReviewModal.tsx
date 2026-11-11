@@ -98,11 +98,11 @@ export default function CustomerReviewModal({ order, canAccept = true, onClose, 
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-end md:items-center justify-center md:p-4 bg-ink/70 backdrop-blur-md"
+      className="anim-backdrop fixed inset-0 z-[150] flex items-end md:items-center justify-center md:p-4 bg-ink/70 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-surface-raised rounded-t-2xl md:rounded-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
+        className="anim-pop w-full max-w-lg bg-surface-raised rounded-t-2xl md:rounded-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

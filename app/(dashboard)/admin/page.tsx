@@ -472,8 +472,8 @@ function ConfirmDeleteModal({
   isPending: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-surface-raised rounded-2xl p-6 space-y-5">
+    <div className="anim-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
+      <div className="anim-pop w-full max-w-md bg-surface-raised rounded-2xl p-6 space-y-5">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-2xl bg-status-error/10 flex items-center justify-center shrink-0">
             <AlertTriangle size={20} className="text-status-error" />
