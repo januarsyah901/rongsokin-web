@@ -125,7 +125,7 @@ export default function OrdersPage() {
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-surface-raised rounded-2xl p-4 h-24 animate-pulse" />
+              <div key={i} className="bg-surface-raised rounded-2xl p-4 h-24 shimmer shimmer-ink" />
             ))}
           </div>
         ) : filteredOrders.length > 0 ? (

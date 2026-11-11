@@ -307,7 +307,7 @@ export default function LandingPage() {
               className="bg-surface-raised rounded-2xl p-5 text-center"
             >
               {isStatsLoading ? (
-                <div className="h-8 md:h-9 w-12 mx-auto bg-surface rounded-md animate-pulse" />
+                <div className="h-8 md:h-9 w-12 mx-auto bg-surface rounded-md shimmer" />
               ) : (
                 <div className="text-2xl md:text-3xl font-display font-extrabold text-ink font-mono">
                   {stat.value}
@@ -395,9 +395,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-surface-raised rounded-2xl p-5 text-center">
-                <div className="w-12 h-12 bg-surface rounded-full mx-auto mb-3 animate-pulse" />
-                <div className="h-3 bg-surface rounded w-3/4 mx-auto mb-2 animate-pulse" />
-                <div className="h-2 bg-surface rounded w-1/2 mx-auto animate-pulse" />
+                <div className="w-12 h-12 bg-surface rounded-full mx-auto mb-3 shimmer" />
+                <div className="h-3 bg-surface rounded w-3/4 mx-auto mb-2 shimmer" />
+                <div className="h-2 bg-surface rounded w-1/2 mx-auto shimmer" />
               </div>
             ))}
           </div>

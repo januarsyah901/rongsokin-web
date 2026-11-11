@@ -11,9 +11,7 @@ import toast from "react-hot-toast";
 const LocationPickerMap = dynamic(() => import("./LocationPickerMap"), {
   ssr: false,
   loading: () => (
-    <div className="rounded-2xl bg-surface h-[300px] flex items-center justify-center">
-      <RefreshCw className="w-6 h-6 text-brand-700 animate-spin" />
-    </div>
+    <div aria-hidden="true" className="shimmer rounded-2xl bg-surface h-[300px]" />
   ),
 });
 

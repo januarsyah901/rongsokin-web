@@ -70,7 +70,7 @@ export function RatingSection({
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="bg-surface rounded-2xl h-20 animate-pulse" />
+            <div key={i} className="bg-surface rounded-2xl h-20 shimmer" />
           ))}
         </div>
       ) : ratings && ratings.length > 0 ? (

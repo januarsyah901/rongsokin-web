@@ -318,7 +318,7 @@ function OrderForm() {
               {isCategoriesLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="rounded-2xl animate-pulse bg-surface h-16" />
+                    <div key={i} className="rounded-2xl shimmer bg-surface h-16" />
                   ))}
                 </div>
               ) : mains.length > 0 ? (
