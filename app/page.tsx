@@ -31,6 +31,12 @@ import {
 import { DEFAULT_COORDS, formatDistance, formatRupiah } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
+import { Reveal } from "@/components/ui/motion/Reveal";
+import { Stagger, StaggerItem, staggerItemVariants } from "@/components/ui/motion/Stagger";
+import { CountUp } from "@/components/ui/motion/CountUp";
+
+const MotionLink = motion.create(Link);
 
 // Statik — 6 kategori utama (showcase landing, tidak fetch BE)
 const CATEGORIES = [
@@ -218,7 +224,7 @@ export default function LandingPage() {
                     <button
                       key={c.name}
                       onClick={() => setEstIdx(i)}
-                      className={`flex flex-col items-center gap-1.5 rounded-xl py-2.5 border transition-colors ${
+                      className={`flex flex-col items-center gap-1.5 rounded-xl py-2.5 border transition-[background-color,border-color,color,scale] active:scale-95 ${
                         active
                           ? "bg-brand-500 border-brand-500 text-ink"
                           : "bg-surface border-ink-faint text-ink-muted hover:border-ink"
@@ -237,7 +243,7 @@ export default function LandingPage() {
                 <div className="flex items-center justify-between gap-3">
                   <button
                     onClick={() => setEstWeight((w) => Math.max(1, w - 1))}
-                    className="w-9 h-9 rounded-full bg-surface-raised border border-ink-faint flex items-center justify-center text-ink hover:bg-brand-100 transition-colors shrink-0 font-bold text-lg"
+                    className="w-9 h-9 rounded-full bg-surface-raised border border-ink-faint flex items-center justify-center text-ink hover:bg-brand-100 transition-[background-color,scale] active:scale-90 shrink-0 font-bold text-lg"
                     aria-label="Kurangi"
                   >
                     −
@@ -247,7 +253,7 @@ export default function LandingPage() {
                   </div>
                   <button
                     onClick={() => setEstWeight((w) => Math.min(999, w + 1))}
-                    className="w-9 h-9 rounded-full bg-surface-raised border border-ink-faint flex items-center justify-center text-ink hover:bg-brand-100 transition-colors shrink-0 font-bold text-lg"
+                    className="w-9 h-9 rounded-full bg-surface-raised border border-ink-faint flex items-center justify-center text-ink hover:bg-brand-100 transition-[background-color,scale] active:scale-90 shrink-0 font-bold text-lg"
                     aria-label="Tambah"
                   >
                     +
@@ -266,7 +272,7 @@ export default function LandingPage() {
                 <div>
                   <div className="text-[11px] font-semibold text-brand-800">Perkiraan diterima</div>
                   <div className="font-display text-2xl font-extrabold text-ink font-mono">
-                    {formatRupiah(estTotal)}
+                    <CountUp value={estTotal} from={estTotal} duration={0.35} format={formatRupiah} />
                   </div>
                 </div>
                 <div className="text-[10px] font-mono text-brand-800 text-right leading-tight">
@@ -290,19 +296,19 @@ export default function LandingPage() {
 
       {/* STATS BAR */}
       <section className="px-4 md:px-8 mb-10 max-w-6xl mx-auto">
-        <div className="grid grid-cols-3 gap-3 md:gap-4">
+        <Stagger className="grid grid-cols-3 gap-3 md:gap-4">
           {[
-            { value: `${stats?.totalTransactions ?? 0}`, label: "Transaksi" },
+            { value: stats?.totalTransactions ?? 0, label: "Transaksi" },
             {
-              value: `${stats?.totalCollectors ?? featuredCollectors.length}`,
+              value: stats?.totalCollectors ?? featuredCollectors.length,
               label: "Pengepul",
             },
             {
-              value: `${stats?.totalCategories ?? categories?.length ?? 0}`,
+              value: stats?.totalCategories ?? categories?.length ?? 0,
               label: "Kategori",
             },
           ].map((stat) => (
-            <div
+            <StaggerItem
               key={stat.label}
               className="bg-surface-raised rounded-2xl p-5 text-center"
             >
@@ -310,15 +316,15 @@ export default function LandingPage() {
                 <div className="h-8 md:h-9 w-12 mx-auto bg-surface rounded-md shimmer" />
               ) : (
                 <div className="text-2xl md:text-3xl font-display font-extrabold text-ink font-mono">
-                  {stat.value}
+                  <CountUp value={Number(stat.value) || 0} />
                 </div>
               )}
               <div className="text-[10px] md:text-xs font-bold text-mute uppercase tracking-wider mt-1">
                 {stat.label}
               </div>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* CATEGORIES */}
@@ -334,22 +340,23 @@ export default function LandingPage() {
             Jual Sekarang <ArrowRight size={14} />
           </Link>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <Stagger className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           {CATEGORIES.map((cat) => (
-            <Link
+            <MotionLink
+              variants={staggerItemVariants}
               href={`/search?category=${encodeURIComponent(cat.name)}`}
               key={cat.name}
-              className="flex flex-col items-center gap-3 bg-surface-raised rounded-2xl p-5 hover:bg-brand-100 transition-colors group"
+              className="flex flex-col items-center gap-3 bg-surface-raised rounded-2xl p-5 hover:bg-brand-100 active:scale-[0.97] transition-[background-color,scale] group"
             >
-              <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center text-ink group-hover:bg-brand-500 transition-colors">
+              <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center text-ink group-hover:bg-brand-500 group-hover:scale-110 group-hover:-rotate-6 transition-[background-color,scale,rotate] duration-200">
                 <cat.icon size={22} />
               </div>
               <span className="text-[11px] font-bold text-ink text-center leading-tight">
                 {cat.name}
               </span>
-            </Link>
+            </MotionLink>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* HOW IT WORKS */}
@@ -357,9 +364,9 @@ export default function LandingPage() {
         <h2 className="text-xl md:text-2xl font-display font-extrabold text-ink mb-5 tracking-tight">
           Cara Kerja Rongsok.in
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {HOW_IT_WORKS.map((step) => (
-            <div
+            <StaggerItem
               key={step.step}
               className="bg-surface-raised rounded-2xl p-6 space-y-4"
             >
@@ -373,9 +380,9 @@ export default function LandingPage() {
               </div>
               <h3 className="font-display font-extrabold text-base text-ink">{step.title}</h3>
               <p className="text-sm text-ink-muted leading-relaxed">{step.desc}</p>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* FEATURED COLLECTORS */}
@@ -402,9 +409,10 @@ export default function LandingPage() {
             ))}
           </div>
         ) : featuredCollectors.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Stagger className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {featuredCollectors.map((collector) => (
-              <Link
+              <MotionLink
+                variants={staggerItemVariants}
                 key={collector.id}
                 href={`/pengepul/${collector.id}`}
                 className="bg-surface-raised rounded-2xl p-5 text-center hover:bg-brand-100 transition-colors block"
@@ -426,9 +434,9 @@ export default function LandingPage() {
                     {formatDistance(collector.distance)}
                   </div>
                 )}
-              </Link>
+              </MotionLink>
             ))}
-          </div>
+          </Stagger>
         ) : (
           <div className="bg-surface-raised rounded-2xl p-8 text-center">
             <div className="w-12 h-12 bg-surface rounded-full flex items-center justify-center mx-auto mb-3 text-ink-faint">
@@ -444,7 +452,7 @@ export default function LandingPage() {
 
       {/* CTA BOTTOM — dark polarity band */}
       <section className="px-4 md:px-8 mb-10 max-w-6xl mx-auto">
-        <div className="bg-ink rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6">
+        <Reveal className="bg-ink rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <h2 className="text-2xl md:text-4xl font-display font-extrabold text-brand-500 tracking-tight leading-tight">
               Siap mulai daur ulang?
@@ -455,17 +463,17 @@ export default function LandingPage() {
           </div>
           <div className="flex gap-3 shrink-0 flex-wrap justify-center">
             <Link href="/register">
-              <button className="bg-brand-500 text-ink hover:bg-brand-600 font-semibold px-6 py-3 rounded-2xl text-sm transition-colors">
+              <button className="bg-brand-500 text-ink hover:bg-brand-600 font-semibold px-6 py-3 rounded-2xl text-sm transition-[background-color,scale] active:scale-[0.97]">
                 Daftar Customer
               </button>
             </Link>
             <Link href="/register?role=COLLECTOR">
-              <button className="bg-transparent border border-forest-ink/40 text-forest-ink hover:bg-forest-3 font-semibold px-6 py-3 rounded-2xl text-sm transition-colors flex items-center gap-2">
+              <button className="bg-transparent border border-forest-ink/40 text-forest-ink hover:bg-forest-3 font-semibold px-6 py-3 rounded-2xl text-sm transition-[background-color,scale] active:scale-[0.97] flex items-center gap-2">
                 <Building2 size={16} /> Daftar Pengepul
               </button>
             </Link>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <BottomNav />

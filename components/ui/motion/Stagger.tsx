@@ -7,7 +7,8 @@ const container: Variants = {
   show: { transition: { staggerChildren: 0.05 } },
 };
 
-const item: Variants = {
+/** Varian anak — pakai langsung pada motion.create(Link) dsb. */
+export const staggerItemVariants: Variants = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.2, 0.7, 0.2, 1] } },
 };
@@ -29,5 +30,5 @@ export function Stagger(props: HTMLMotionProps<"div">) {
 }
 
 export function StaggerItem(props: HTMLMotionProps<"div">) {
-  return <motion.div variants={item} {...props} />;
+  return <motion.div variants={staggerItemVariants} {...props} />;
 }
