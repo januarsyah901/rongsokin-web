@@ -56,6 +56,18 @@ import api from "@/lib/axios";
 import EcoImpactModal from "@/components/features/eco-impact/EcoImpactModal";
 import OrderRouteMap from "@/components/features/orders/OrderRouteMap";
 import { useLiveTracking } from "@/hooks/useLiveTracking";
+import OrderStatusStepper from "@/components/features/orders/OrderStatusStepper";
+import { SuccessCheck } from "@/components/ui/motion/SuccessCheck";
+import { AnimatePresence, motion } from "motion/react";
+
+// Panel aksi yang muncul/hilang saat status berubah (render pertama diam —
+// AnimatePresence initial={false}).
+const panelMotion = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+  transition: { duration: 0.25, ease: [0.2, 0.7, 0.2, 1] },
+} as const;
 import { useEcoLeaderboard } from "@/hooks/useEco";
 
 export default function OrderTrackingPage() {
@@ -444,21 +456,43 @@ export default function OrderTrackingPage() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 py-6 space-y-6">
         {/* STATUS HERO + KONTAK WHATSAPP */}
-        <section className={`rounded-2xl p-6 border ${heroTone}`}>
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-surface-raised flex items-center justify-center shrink-0 text-ink">
-              <statusMeta.Icon
-                size={24}
-                className={order.status === "PENDING" ? "animate-spin text-brand-700" : "text-brand-700"}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="font-display font-extrabold text-lg text-ink tracking-tight leading-tight">
-                {statusMeta.title}
-              </h2>
-              <p className="text-sm text-ink-muted mt-1 leading-relaxed">{statusMeta.desc}</p>
-            </div>
-          </div>
+        <section className={`rounded-2xl p-6 border transition-colors duration-300 ${heroTone}`}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={order.status}
+              className="flex items-start gap-4"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <div className="relative w-12 h-12 shrink-0">
+                {/* Radar "sedang mencari pengepul" — hanya selama PENDING */}
+                {order.status === "PENDING" && (
+                  <>
+                    <span aria-hidden="true" className="radar-ring absolute inset-0 rounded-2xl bg-brand-500/40" />
+                    <span aria-hidden="true" className="radar-ring radar-ring-delay absolute inset-0 rounded-2xl bg-brand-500/40" />
+                  </>
+                )}
+                <div className="relative w-12 h-12 rounded-2xl bg-surface-raised flex items-center justify-center text-ink">
+                  {order.status === "COMPLETED" ? (
+                    <SuccessCheck size={24} className="text-brand-700" />
+                  ) : (
+                    <statusMeta.Icon
+                      size={24}
+                      className={order.status === "PENDING" ? "animate-spin text-brand-700" : "text-brand-700"}
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-display font-extrabold text-lg text-ink tracking-tight leading-tight">
+                  {statusMeta.title}
+                </h2>
+                <p className="text-sm text-ink-muted mt-1 leading-relaxed">{statusMeta.desc}</p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
 
           {showContact && (
             <div className="mt-4 flex flex-col sm:flex-row gap-2">
@@ -495,48 +529,7 @@ export default function OrderTrackingPage() {
             Status Perjalanan
           </h3>
 
-          <div className="relative flex justify-between items-center w-full">
-            {statusFlow.map((s, idx) => {
-              const isPassed = idx < currentStepIdx;
-              const isCurrent = idx === currentStepIdx;
-
-              let label = "Menunggu";
-              if (s === "CONFIRMED") label = "Diterima";
-              if (s === "ON_THE_WAY") label = "Perjalanan";
-              if (s === "IN_PROGRESS") label = "Timbang";
-              if (s === "COMPLETED") label = "Selesai";
-
-              return (
-                <div key={s} className="flex flex-col items-center gap-2 z-10">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all font-mono text-xs font-bold ${
-                      isPassed
-                        ? "bg-brand-500 border-brand-500 text-ink"
-                        : isCurrent
-                        ? "border-ink text-ink bg-brand-100 ring-4 ring-brand-100"
-                        : "border-ink-faint bg-surface-raised text-ink-faint"
-                    }`}
-                  >
-                    {isPassed ? <CheckCircle2 size={16} /> : idx + 1}
-                  </div>
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-wider ${
-                      isCurrent || isPassed ? "text-ink" : "text-mute"
-                    }`}
-                  >
-                    {label}
-                  </span>
-                </div>
-              );
-            })}
-
-            <div className="absolute left-4 right-4 top-4 h-0.5 bg-surface-sunken -z-0">
-              <div
-                className="h-full bg-brand-500 transition-all duration-500"
-                style={{ width: `${(currentStepIdx / (statusFlow.length - 1)) * 100}%` }}
-              />
-            </div>
-          </div>
+          <OrderStatusStepper steps={statusFlow} currentIdx={currentStepIdx} />
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -660,10 +653,11 @@ export default function OrderTrackingPage() {
           </div>
 
           {/* RIGHT: ACTIONS */}
-          <div className="space-y-6">
+          <div className="relative space-y-6">
+            <AnimatePresence initial={false} mode="popLayout">
             {/* PETA & PERJALANAN (live tracking) */}
             {["CONFIRMED", "ON_THE_WAY", "IN_PROGRESS"].includes(order.status) && (
-              <section className="bg-surface-raised rounded-2xl p-5 space-y-4">
+              <motion.section key="route" layout="position" {...panelMotion} className="bg-surface-raised rounded-2xl p-5 space-y-4">
                 <div className="flex items-center gap-2 text-ink">
                   <Navigation size={18} className="text-brand-700" />
                   <h3 className="font-display font-extrabold text-sm tracking-tight">
@@ -707,13 +701,13 @@ export default function OrderTrackingPage() {
                     Pesanan otomatis dibatalkan jika dalam 3 jam belum ditandai sampai.
                   </p>
                 )}
-              </section>
+              </motion.section>
             )}
 
             {/* COLLECTOR VALIDATE — per item. Hanya SETELAH "Sudah Sampai" diklik
                 (IN_PROGRESS) — form timbangan tak boleh muncul selagi masih OTW. */}
             {isCollector && order.status === "IN_PROGRESS" && (
-              <section className="bg-surface-raised border border-ink rounded-2xl p-6 space-y-4">
+              <motion.section key="validate" layout="position" {...panelMotion} className="bg-surface-raised border border-ink rounded-2xl p-6 space-y-4">
                 <div className="flex items-center gap-2 text-ink">
                   <Scale size={20} />
                   <h3 className="font-display font-extrabold text-sm tracking-tight">
@@ -811,12 +805,12 @@ export default function OrderTrackingPage() {
                 >
                   {updateOrderStatus.isPending ? "Mengirim…" : "Kirim Rincian Timbangan"}
                 </Button>
-              </section>
+              </motion.section>
             )}
 
             {/* CUSTOMER APPROVE */}
             {isCustomer && order.status === "AWAITING_CONFIRMATION" && (
-              <section className="bg-surface-raised border border-ink rounded-2xl p-6 space-y-4">
+              <motion.section key="approve" layout="position" {...panelMotion} className="bg-surface-raised border border-ink rounded-2xl p-6 space-y-4">
                 <div className="flex items-center gap-2 text-ink">
                   <CheckCircle2 size={20} />
                   <h3 className="font-display font-extrabold text-sm tracking-tight">
@@ -860,12 +854,12 @@ export default function OrderTrackingPage() {
                 >
                   {updateOrderStatus.isPending ? "Memproses…" : "Setujui & Selesaikan"}
                 </Button>
-              </section>
+              </motion.section>
             )}
 
             {/* PARTNER CONTACT */}
             {partner && (
-              <section className="bg-surface-raised rounded-2xl p-5 space-y-4">
+              <motion.section key="partner" layout="position" {...panelMotion} className="bg-surface-raised rounded-2xl p-5 space-y-4">
                 <h4 className="font-display font-extrabold text-xs text-mute uppercase tracking-widest">
                   Hubungi {isCustomer ? "Mitra Pengepul" : "Customer"}
                 </h4>
@@ -887,12 +881,12 @@ export default function OrderTrackingPage() {
                     </Button>
                   </a>
                 )}
-              </section>
+              </motion.section>
             )}
 
             {/* CANCEL */}
             {["PENDING", "CONFIRMED", "ON_THE_WAY", "IN_PROGRESS"].includes(order.status) && (
-              <section className="bg-surface-raised rounded-2xl p-5 space-y-3">
+              <motion.section key="manage" layout="position" {...panelMotion} className="bg-surface-raised rounded-2xl p-5 space-y-3">
                 <h4 className="font-display font-extrabold text-xs text-mute uppercase tracking-widest">
                   Kelola Pesanan
                 </h4>
@@ -904,12 +898,12 @@ export default function OrderTrackingPage() {
                 >
                   {updateOrderStatus.isPending ? "Membatalkan…" : "Batalkan Pesanan"}
                 </Button>
-              </section>
+              </motion.section>
             )}
 
             {/* DIGITAL RECEIPT */}
             {order.status === "COMPLETED" && (
-              <section className="bg-surface-raised rounded-t-2xl p-6 pb-8 space-y-4 relative receipt-edge">
+              <motion.section key="receipt" layout="position" {...panelMotion} className="bg-surface-raised rounded-t-2xl p-6 pb-8 space-y-4 relative receipt-edge">
                 <div className="flex justify-between items-center border-b border-dashed border-ink-faint pb-3">
                   <h4 className="font-display font-extrabold text-sm text-ink uppercase tracking-wider flex items-center gap-1.5">
                      Digital Receipt
@@ -990,8 +984,9 @@ export default function OrderTrackingPage() {
                     </button>
                   </div>
                 )}
-              </section>
+              </motion.section>
             )}
+            </AnimatePresence>
           </div>
         </div>
       </main>
@@ -1013,8 +1008,8 @@ export default function OrderTrackingPage() {
 
       {/* RATING MODAL */}
       {showRating && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-surface-raised rounded-2xl p-6 space-y-6">
+        <div className="anim-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
+          <div className="anim-pop w-full max-w-sm bg-surface-raised rounded-2xl p-6 space-y-6">
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center text-brand-800 mx-auto">
                 <Star className="fill-brand-500 text-brand-800" size={24} />
@@ -1032,7 +1027,7 @@ export default function OrderTrackingPage() {
                   <button
                     key={star}
                     onClick={() => setRatingScore(star)}
-                    className="hover:scale-110 transition-transform"
+                    className="hover:scale-110 active:scale-95 transition-transform"
                   >
                     <Star
                       size={32}
