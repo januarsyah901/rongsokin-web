@@ -185,7 +185,7 @@ export default function EcoPage() {
           {lbLoading ? (
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="bg-surface-raised rounded-2xl h-16 animate-pulse" />
+                <div key={i} className="bg-surface-raised rounded-2xl h-16 shimmer shimmer-ink" />
               ))}
             </div>
           ) : !beAvailable ? (

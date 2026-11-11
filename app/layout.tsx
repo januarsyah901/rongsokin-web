@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 import QueryProvider from "@/components/providers/QueryProvider";
+import MotionProvider from "@/components/providers/MotionProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const fontDisplay = Manrope({
@@ -70,7 +71,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-body bg-surface text-ink pb-20 md:pb-0">
         <QueryProvider>
-          {children}
+          <MotionProvider>{children}</MotionProvider>
         </QueryProvider>
         <ConfirmDialog />
         <Toaster

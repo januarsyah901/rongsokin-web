@@ -32,6 +32,7 @@ import { useCreateOrder } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
 import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/apiError";
+import { SuccessOverlay } from "@/components/ui/motion/SuccessOverlay";
 
 // Ikon per kategori UTAMA (by name)
 const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
@@ -307,7 +308,7 @@ function OrderForm() {
         <main className="p-6 md:p-8">
           {/* STEP 1: PILIH KATEGORI (multi-select) */}
           {step === 1 && (
-            <div className="space-y-5">
+            <div className="anim-step space-y-5">
               <h2 className="font-display text-2xl font-extrabold text-ink tracking-tight">
                 Apa yang ingin kamu jual?
               </h2>
@@ -318,7 +319,7 @@ function OrderForm() {
               {isCategoriesLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="rounded-2xl animate-pulse bg-surface h-16" />
+                    <div key={i} className="rounded-2xl shimmer bg-surface h-16" />
                   ))}
                 </div>
               ) : mains.length > 0 ? (
@@ -410,7 +411,7 @@ function OrderForm() {
 
           {/* STEP 2: DETAIL & FOTO */}
           {step === 2 && (
-            <div className="space-y-6">
+            <div className="anim-step space-y-6">
               <h2 className="font-display text-2xl font-extrabold text-ink tracking-tight">
                 Detail Barang
               </h2>
@@ -538,7 +539,7 @@ function OrderForm() {
 
           {/* STEP 3: METODE & LOKASI */}
           {step === 3 && (
-            <div className="space-y-6">
+            <div className="anim-step space-y-6">
               <h2 className="font-display text-2xl font-extrabold text-ink tracking-tight">
                 Opsi Pengiriman
               </h2>
@@ -659,7 +660,7 @@ function OrderForm() {
 
           {/* STEP 4: KONFIRMASI */}
           {step === 4 && (
-            <div className="space-y-6">
+            <div className="anim-step space-y-6">
               <h2 className="font-display text-2xl font-extrabold text-ink tracking-tight">
                 Konfirmasi Pesanan
               </h2>
@@ -782,6 +783,9 @@ function OrderForm() {
           )}
         </main>
       </div>
+
+      {/* Konfirmasi visual selagi diarahkan ke halaman pelacakan */}
+      {createOrder.isSuccess && <SuccessOverlay label="Setoran berhasil dibuat" />}
 
       <BottomNav />
     </div>

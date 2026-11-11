@@ -75,8 +75,8 @@ export default function EcoImpactModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-md overflow-y-auto">
-      <div className="w-full max-w-md bg-surface-raised rounded-2xl p-6 space-y-6 shadow-2xl relative my-8">
+    <div className="anim-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-md overflow-y-auto">
+      <div className="anim-pop w-full max-w-md bg-surface-raised rounded-2xl p-6 space-y-6 shadow-2xl relative my-8">
         
         {/* HEADER SECTION */}
         <div className="text-center space-y-2">

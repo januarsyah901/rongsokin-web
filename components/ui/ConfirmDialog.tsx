@@ -44,11 +44,11 @@ export default function ConfirmDialog() {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-md"
+      className="anim-backdrop fixed inset-0 z-[200] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-md"
       onClick={onBackdrop}
     >
       <div
-        className="w-full max-w-sm bg-surface-raised rounded-2xl p-6 shadow-2xl space-y-5"
+        className="anim-pop w-full max-w-sm bg-surface-raised rounded-2xl p-6 shadow-2xl space-y-5"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"

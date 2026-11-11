@@ -1,15 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { MapPin, RefreshCw } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 // Leaflet butuh window → dynamic import ssr:false
 const RadiusCircleMapInner = dynamic(() => import("./RadiusCircleMapInner"), {
   ssr: false,
   loading: () => (
-    <div className="rounded-2xl bg-surface h-[180px] flex items-center justify-center border border-ink-faint">
-      <RefreshCw className="w-5 h-5 text-brand-700 animate-spin" />
-    </div>
+    <div aria-hidden="true" className="shimmer rounded-2xl bg-surface h-[180px] border border-ink-faint" />
   ),
 });
 

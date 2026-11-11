@@ -328,7 +328,7 @@ export default function CustomerDashboard() {
               : [1, 2, 3, 4, 5].map((i) => (
                   <div
                     key={i}
-                    className="w-20 h-24 bg-surface-raised rounded-2xl animate-pulse shrink-0"
+                    className="w-20 h-24 bg-surface-raised rounded-2xl shimmer shimmer-ink shrink-0"
                   />
                 ))}
           </div>
@@ -366,7 +366,7 @@ export default function CustomerDashboard() {
           <div className="space-y-2">
             {isNearbyLoading ? (
               [1, 2].map((i) => (
-                <div key={i} className="bg-surface-raised rounded-2xl p-4 h-20 animate-pulse" />
+                <div key={i} className="bg-surface-raised rounded-2xl p-4 h-20 shimmer shimmer-ink" />
               ))
             ) : nearbyCollectors && nearbyCollectors.length > 0 ? (
               nearbyCollectors.map((collector) => (

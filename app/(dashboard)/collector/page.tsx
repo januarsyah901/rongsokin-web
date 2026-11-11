@@ -58,6 +58,13 @@ import { Order } from "@/types";
 import toast from "react-hot-toast";
 import { methodLabel } from "@/lib/orderStatus";
 import { getApiErrorMessage } from "@/lib/apiError";
+import { AnimatePresence, motion } from "motion/react";
+import { CountUp } from "@/components/ui/motion/CountUp";
+
+// Kartu/baris tawaran baru: meluncur masuk dengan pegas, keluar menyamping.
+const OFFER_SPRING = { type: "spring", stiffness: 420, damping: 32 } as const;
+
+const fmtKg = (n: number) => n.toFixed(1);
 
 const mainIcon = (name: string): React.ComponentType<{ size?: number; className?: string }> => {
   if (name.includes("Plastik")) return RefreshCw;
@@ -141,7 +148,7 @@ function IncomingOrderCard({
 
   return (
     <div
-      className="bg-surface rounded-2xl p-4 cursor-pointer hover:ring-2 hover:ring-brand-200 transition-shadow"
+      className="offer-attention bg-surface rounded-2xl p-4 cursor-pointer hover:ring-2 hover:ring-brand-200 transition-shadow"
       onClick={() => onOpenDetail(order)}
     >
       <div className="flex justify-between items-start mb-3">
@@ -161,10 +168,17 @@ function IncomingOrderCard({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 bg-surface-raised px-2 py-1 rounded-full">
-          <Clock size={12} className={timeLeft < 60 ? "text-status-error" : "text-ink-muted"} />
+        <div
+          className={`flex items-center gap-1 bg-surface-raised px-2 py-1 rounded-full ${
+            timeLeft > 0 && timeLeft < 60 ? "urgent-tick" : ""
+          }`}
+        >
+          <Clock
+            size={12}
+            className={`transition-colors duration-300 ${timeLeft < 60 ? "text-status-error" : "text-ink-muted"}`}
+          />
           <span
-            className={`text-xs font-mono font-bold ${
+            className={`text-xs font-mono font-bold transition-colors duration-300 ${
               timeLeft < 60 ? "text-status-error" : "text-ink"
             }`}
           >
@@ -232,7 +246,7 @@ function IncomingOrderCard({
       {/* Lightbox foto */}
       {showPhoto && order.photoUrl && (
         <div
-          className="fixed inset-0 z-[100] bg-ink/90 flex items-center justify-center p-4"
+          className="anim-backdrop fixed inset-0 z-[100] bg-ink/90 flex items-center justify-center p-4"
           onClick={(e) => {
             e.stopPropagation();
             setShowPhoto(false);
@@ -242,7 +256,7 @@ function IncomingOrderCard({
           <img
             src={order.photoUrl}
             alt="Foto rongsok"
-            className="max-w-full max-h-[82vh] rounded-2xl object-contain"
+            className="anim-pop max-w-full max-h-[82vh] rounded-2xl object-contain"
           />
           <button
             type="button"
@@ -302,7 +316,11 @@ function RequestRow({
   const items = getOrderItems(order);
 
   return (
-    <tr
+    <motion.tr
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 24, transition: { duration: 0.18 } }}
+      transition={OFFER_SPRING}
       className="hover:bg-surface transition-colors cursor-pointer"
       onClick={() => onOpenDetail(order)}
     >
@@ -342,7 +360,7 @@ function RequestRow({
         </div>
         {showPhoto && order.photoUrl && (
           <div
-            className="fixed inset-0 z-[100] bg-ink/90 flex items-center justify-center p-4"
+            className="anim-backdrop fixed inset-0 z-[100] bg-ink/90 flex items-center justify-center p-4"
             onClick={(e) => {
             e.stopPropagation();
             setShowPhoto(false);
@@ -352,7 +370,7 @@ function RequestRow({
             <img
               src={order.photoUrl}
               alt="Foto rongsok"
-              className="max-w-full max-h-[82vh] rounded-2xl object-contain"
+              className="anim-pop max-w-full max-h-[82vh] rounded-2xl object-contain"
             />
             <button
               type="button"
@@ -400,12 +418,12 @@ function RequestRow({
             handleAccept();
           }}
           disabled={updateOrderStatus.isPending || !canAccept}
-          className="bg-brand-500 hover:bg-brand-600 text-ink font-bold text-[10px] px-3.5 py-2 rounded-2xl transition-all inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+          className="bg-brand-500 hover:bg-brand-600 text-ink font-bold text-[10px] px-3.5 py-2 rounded-2xl transition-all inline-flex items-center gap-1 cursor-pointer enabled:active:scale-95 disabled:opacity-50"
         >
           <Check size={10} /> Ambil
         </button>
       </td>
-    </tr>
+    </motion.tr>
   );
 }
 
@@ -675,9 +693,15 @@ export default function CollectorDashboard() {
                 </span>
               </h3>
               {warOrders.length > 0 && (
-                <span className="bg-brand-100 text-brand-800 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full">
+                <motion.span
+                  key={warOrders.length}
+                  initial={{ scale: 0.7, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                  className="bg-brand-100 text-brand-800 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                >
                   {warOrders.length} Aktif
-                </span>
+                </motion.span>
               )}
             </div>
 
@@ -694,6 +718,7 @@ export default function CollectorDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-faint">
+                  <AnimatePresence initial={false}>
                   {warOrders.length > 0 ? (
                     warOrders.map((order) => (
                       <RequestRow
@@ -705,7 +730,7 @@ export default function CollectorDashboard() {
                       />
                     ))
                   ) : (
-                    <tr>
+                    <tr key="empty">
                       <td colSpan={6} className="p-10 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <div className="w-12 h-12 bg-surface rounded-full flex items-center justify-center text-ink-muted">
@@ -716,6 +741,7 @@ export default function CollectorDashboard() {
                       </td>
                     </tr>
                   )}
+                  </AnimatePresence>
                 </tbody>
               </table>
             </div>
@@ -730,31 +756,55 @@ export default function CollectorDashboard() {
                 Forward
               </span>
               {forwardOrders.length > 0 && (
-                <span className="bg-brand-500 text-ink text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                <motion.span
+                  key={forwardOrders.length}
+                  initial={{ scale: 0.6 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                  className="bg-brand-500 text-ink text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full"
+                >
                   {forwardOrders.length}
-                </span>
+                </motion.span>
               )}
             </h3>
 
-            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-              {forwardOrders.length > 0 ? (
-                forwardOrders.map((order) => (
-                  <IncomingOrderCard
-                    key={order.id}
-                    order={order}
-                    onRemove={removeIncomingOrder}
-                    onOpenDetail={(o) => setDetailOrderId(o.id)}
-                    canAccept={!needsVerify}
-                  />
-                ))
-              ) : (
-                <div className="bg-surface rounded-2xl p-8 flex flex-col items-center text-center">
-                  <Clock size={28} className="text-ink-faint mb-2" />
-                  <span className="text-xs font-bold text-ink">
-                    Sedang tidak ada request private dari customer
-                  </span>
-                </div>
-              )}
+            <div className="relative space-y-3 max-h-72 overflow-y-auto pr-1">
+              <AnimatePresence initial={false} mode="popLayout">
+                {forwardOrders.length > 0 ? (
+                  forwardOrders.map((order) => (
+                    <motion.div
+                      key={order.id}
+                      layout
+                      initial={{ opacity: 0, y: -16, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: 40, transition: { duration: 0.2 } }}
+                      transition={OFFER_SPRING}
+                      className="rounded-2xl"
+                    >
+                      <IncomingOrderCard
+                        order={order}
+                        onRemove={removeIncomingOrder}
+                        onOpenDetail={(o) => setDetailOrderId(o.id)}
+                        canAccept={!needsVerify}
+                      />
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-surface rounded-2xl p-8 flex flex-col items-center text-center"
+                  >
+                    <Clock size={28} className="text-ink-faint mb-2" />
+                    <span className="text-xs font-bold text-ink">
+                      Sedang tidak ada request private dari customer
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </section>
         </div>
@@ -826,7 +876,8 @@ export default function CollectorDashboard() {
                   Transaksi
                 </span>
                 <span className="font-extrabold text-lg text-ink font-mono">
-                  {todayTrxCount} <span className="text-xs font-semibold text-mute">trx</span>
+                  <CountUp value={todayTrxCount} from={todayTrxCount} />{" "}
+                  <span className="text-xs font-semibold text-mute">trx</span>
                 </span>
               </div>
               <div className="bg-surface p-3 rounded-2xl">
@@ -834,7 +885,8 @@ export default function CollectorDashboard() {
                   Total Berat
                 </span>
                 <span className="font-extrabold text-lg text-ink font-mono">
-                  {todayWeight.toFixed(1)} <span className="text-xs font-semibold text-mute">kg</span>
+                  <CountUp value={todayWeight} from={todayWeight} format={fmtKg} />{" "}
+                  <span className="text-xs font-semibold text-mute">kg</span>
                 </span>
               </div>
               <div className="bg-surface p-3 rounded-2xl col-span-2 flex justify-between items-center">
@@ -843,7 +895,7 @@ export default function CollectorDashboard() {
                     Total Pengeluaran
                   </span>
                   <span className="font-extrabold text-lg text-ink font-mono mt-1 block">
-                    {formatRupiah(todayPayout)}
+                    <CountUp value={todayPayout} from={todayPayout} format={formatRupiah} />
                   </span>
                 </div>
                 <div className="w-8 h-8 rounded-2xl bg-brand-100 text-brand-800 flex items-center justify-center shrink-0">

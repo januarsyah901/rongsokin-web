@@ -142,7 +142,7 @@ function StatsSection() {
     return (
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-surface-raised rounded-2xl h-32 animate-pulse" />
+          <div key={i} className="bg-surface-raised rounded-2xl h-32 shimmer shimmer-ink" />
         ))}
       </section>
     );
@@ -365,7 +365,7 @@ function CategoryManager() {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface rounded-2xl h-16 animate-pulse" />
+            <div key={i} className="bg-surface rounded-2xl h-16 shimmer" />
           ))}
         </div>
       ) : mains.length > 0 ? (
@@ -472,8 +472,8 @@ function ConfirmDeleteModal({
   isPending: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-surface-raised rounded-2xl p-6 space-y-5">
+    <div className="anim-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm">
+      <div className="anim-pop w-full max-w-md bg-surface-raised rounded-2xl p-6 space-y-5">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-2xl bg-status-error/10 flex items-center justify-center shrink-0">
             <AlertTriangle size={20} className="text-status-error" />
@@ -610,7 +610,7 @@ function OrderMonitoring() {
                 [1, 2, 3, 4, 5].map((i) => (
                   <tr key={i} className="border-b border-ink-faint">
                     <td colSpan={8} className="px-4 py-4">
-                      <div className="h-4 bg-surface rounded animate-pulse" />
+                      <div className="h-4 bg-surface rounded shimmer" />
                     </td>
                   </tr>
                 ))

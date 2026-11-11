@@ -101,7 +101,7 @@ export default function MyReviewsPage() {
           {isRatingsLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-surface-raised rounded-2xl h-20 animate-pulse" />
+                <div key={i} className="bg-surface-raised rounded-2xl h-20 shimmer shimmer-ink" />
               ))}
             </div>
           ) : ratings && ratings.length > 0 ? (

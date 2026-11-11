@@ -28,7 +28,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`rounded-2xl px-6 py-3 text-sm font-semibold font-body transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 ${variantStyles} ${className}`}
+        className={`rounded-2xl px-6 py-3 text-sm font-semibold font-body transition-[color,background-color,border-color,filter,scale] duration-150 enabled:active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 ${variantStyles} ${className}`}
         {...props}
       />
     )
