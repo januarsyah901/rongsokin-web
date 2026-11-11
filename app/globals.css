@@ -166,10 +166,18 @@ body {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
 }
 .anim-backdrop {
-  animation: fadeIn 180ms ease-out both;
+  animation: fadeIn 180ms ease-out backwards;
 }
 .anim-pop {
-  animation: popIn 240ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  animation: popIn 240ms cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
+}
+
+/* Ganti langkah wizard (hanya geser — tanpa scale supaya peta Leaflet aman). */
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(12px); }
+}
+.anim-step {
+  animation: stepIn 220ms ease-out backwards;
 }
 
 /* ── Perhatian sekali-dua kali untuk tawaran order baru ───────────────── */
@@ -194,7 +202,7 @@ body {
 /* ── Transisi halaman ringan (hanya opacity — tidak mengubah containing
    block elemen fixed/sticky) ─────────────────────────────────────────── */
 .page-fade {
-  animation: fadeIn 200ms ease-out both;
+  animation: fadeIn 200ms ease-out backwards;
 }
 
 /* ── Radar "mencari pengepul" ─────────────────────────────────────────── */
